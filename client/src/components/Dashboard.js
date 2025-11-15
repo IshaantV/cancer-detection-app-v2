@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Camera, Clock, MessageCircle, User, LogOut, Shield, TrendingUp, Share2 } from 'lucide-react';
+import MedicationTracker from './MedicationTracker';
 import './Dashboard.css';
 
 const Dashboard = ({ user, onLogout }) => {
@@ -95,6 +96,8 @@ const Dashboard = ({ user, onLogout }) => {
           </div>
         </motion.div>
       </div>
+
+      <MedicationTracker user={user} />
 
       <div className="menu-grid">
         {menuItems.map((item, index) => {

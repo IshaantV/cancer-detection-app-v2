@@ -32,6 +32,7 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 let users = [];
 let images = [];
 let chatHistory = [];
+let medications = [];
 
 // Routes
 app.post('/api/register', (req, res) => {
@@ -873,6 +874,76 @@ app.get('/api/generate-pdf/:userId', async (req, res) => {
     console.error('PDF generation error:', error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// Medication endpoints
+app.get('/api/medications/:userId', (req, res) => {
+  const userMeds = medications.filter(m => m.userId === req.params.userId);
+  res.json({ medications: userMeds });
+});
+
+app.post('/api/medications/:userId', (req, res) => {
+  const { name, dosage, frequency, times, startDate, duration } = req.body;
+  
+  if (!name || !dosage) {
+    return res.status(400).json({ error: 'Medication name and dosage are required' });
+  }
+
+  const medication = {
+    id: Date.now().toString(),
+    userId: req.params.userId,
+    name,
+    dosage,
+    frequency: frequency || 'daily',
+    times: times || ['09:00'],
+    startDate: startDate || new Date().toISOString().split('T')[0],
+    duration: duration || 7,
+    takenToday: [],
+    createdAt: new Date()
+  };
+  
+  medications.push(medication);
+  res.json({ success: true, medication });
+});
+
+app.post('/api/medications/:userId/:medId/taken', (req, res) => {
+  const { medId } = req.params;
+  const { time, date } = req.body;
+  
+  const medication = medications.find(m => m.id === medId && m.userId === req.params.userId);
+  
+  if (!medication) {
+    return res.status(404).json({ error: 'Medication not found' });
+  }
+
+  if (!medication.takenToday) {
+    medication.takenToday = [];
+  }
+
+  const today = date || new Date().toISOString().split('T')[0];
+  const existingEntry = medication.takenToday.find(
+    entry => entry.date === today && entry.time === time
+  );
+
+  if (!existingEntry) {
+    medication.takenToday.push({ time, date: today });
+  }
+
+  res.json({ success: true, medication });
+});
+
+app.delete('/api/medications/:userId/:medId', (req, res) => {
+  const { medId } = req.params;
+  const medicationIndex = medications.findIndex(
+    m => m.id === medId && m.userId === req.params.userId
+  );
+  
+  if (medicationIndex === -1) {
+    return res.status(404).json({ error: 'Medication not found' });
+  }
+
+  medications.splice(medicationIndex, 1);
+  res.json({ success: true });
 });
 
 app.listen(PORT, () => {

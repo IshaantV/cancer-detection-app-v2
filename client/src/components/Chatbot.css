@@ -45,6 +45,27 @@
   position: relative;
 }
 
+.chatbot-wrapper.compact,
+.chatbot-container.compact {
+  min-height: auto;
+  padding: 0;
+  max-width: 100%;
+}
+
+.chatbot-container.compact .chatbot-header {
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.chatbot-container.compact .chatbot-header h1 {
+  font-size: 1.2rem;
+}
+
+.chatbot-container.compact .chatbot-header p {
+  font-size: 0.85rem;
+}
+
 .chatbot-header {
   text-align: center;
   margin-bottom: 30px;

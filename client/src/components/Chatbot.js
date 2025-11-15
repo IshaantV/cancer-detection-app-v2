@@ -8,7 +8,7 @@ import './Chatbot.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-const Chatbot = ({ user }) => {
+const Chatbot = ({ user, compact = false }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -109,18 +109,20 @@ const Chatbot = ({ user }) => {
   };
 
   return (
-    <div className="chatbot-wrapper">
-      <motion.button
-        onClick={() => navigate('/dashboard')}
-        whileHover={{ scale: 1.05, x: -5 }}
-        whileTap={{ scale: 0.95 }}
-        className="chatbot-back-button"
-      >
-        <ArrowLeft size={18} />
-        <span>Back</span>
-      </motion.button>
+    <div className={`chatbot-wrapper ${compact ? 'compact' : ''}`}>
+      {!compact && (
+        <motion.button
+          onClick={() => navigate('/dashboard')}
+          whileHover={{ scale: 1.05, x: -5 }}
+          whileTap={{ scale: 0.95 }}
+          className="chatbot-back-button"
+        >
+          <ArrowLeft size={18} />
+          <span>Back</span>
+        </motion.button>
+      )}
 
-      <div className="chatbot-container">
+      <div className={`chatbot-container ${compact ? 'compact' : ''}`}>
         <div className="chatbot-header">
           <motion.div
             className="header-icon-wrapper"

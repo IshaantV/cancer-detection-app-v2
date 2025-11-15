@@ -192,6 +192,57 @@ export const api = {
       console.error('Send message API error:', error);
       throw error;
     }
+  },
+
+  // Medication endpoints
+  getMedications: async (userId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/medications/${userId}`);
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Get medications API error:', error);
+      throw error;
+    }
+  },
+
+  addMedication: async (userId, medication) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/medications/${userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(medication)
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Add medication API error:', error);
+      throw error;
+    }
+  },
+
+  markMedicationTaken: async (userId, medicationId, time) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/medications/${userId}/${medicationId}/taken`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ time, date: new Date().toISOString().split('T')[0] })
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Mark medication taken API error:', error);
+      throw error;
+    }
+  },
+
+  deleteMedication: async (userId, medicationId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/medications/${userId}/${medicationId}`, {
+        method: 'DELETE'
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Delete medication API error:', error);
+      throw error;
+    }
   }
 };
 

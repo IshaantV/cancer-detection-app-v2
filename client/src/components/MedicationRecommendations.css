@@ -1,0 +1,135 @@
+.medication-recommendations {
+  margin-top: 30px;
+  padding: 20px;
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 12px;
+  border-left: 4px solid #3b82f6;
+}
+
+.medication-recommendations h4 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #1e40af;
+  margin-bottom: 20px;
+  font-size: 1.2rem;
+}
+
+.medications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.medication-card {
+  background: white;
+  padding: 18px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 2px solid #e5e7eb;
+  transition: all 0.3s ease;
+}
+
+.medication-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.medication-card.urgent {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.medication-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.medication-header h5 {
+  color: #1f2937;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.med-type {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.med-type.prescription {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.med-type.otc {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.medication-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.medication-details p {
+  margin: 0;
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+.medication-details strong {
+  color: #1f2937;
+}
+
+.med-description {
+  font-style: italic;
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin-top: 8px;
+}
+
+.urgent-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #fee2e2;
+  color: #dc2626;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.medication-disclaimer {
+  margin-top: 15px;
+  padding: 12px;
+  background: #fef3c7;
+  border-radius: 8px;
+  color: #92400e;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .medication-recommendations {
+    padding: 15px;
+  }
+
+  .medication-card {
+    padding: 15px;
+  }
+
+  .medication-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+

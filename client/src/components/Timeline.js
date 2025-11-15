@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Calendar, TrendingUp, Image as ImageIcon, Upload } from 'lucide-react';
+import { ArrowLeft, Calendar, TrendingUp, Image as ImageIcon, Upload, Sparkles } from 'lucide-react';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -15,6 +15,8 @@ import {
   Legend
 } from 'chart.js';
 import api from '../utils/api';
+import Chatbot from './Chatbot';
+import MedicationRecommendations from './MedicationRecommendations';
 import './Timeline.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -33,6 +35,7 @@ const Timeline = ({ user }) => {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [showChatbot, setShowChatbot] = useState(false);
   const navigate = useNavigate();
 
   const fetchImages = useCallback(async () => {
@@ -78,18 +81,45 @@ const Timeline = ({ user }) => {
     };
   }, [fetchImages]);
 
-  const chartData = {
+  // Cancer Risk Chart Data
+  const cancerChartData = {
     labels: images
-      .filter(img => img.analysis)
+      .filter(img => img.analysis && img.analysis.cancer)
       .map(img => new Date(img.uploadedAt).toLocaleDateString()),
     datasets: [
       {
         label: 'Cancer Risk Percentage',
         data: images
-          .filter(img => img.analysis)
-          .map(img => img.analysis.cancerPercentage),
-        borderColor: '#22c55e',
-        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+          .filter(img => img.analysis && img.analysis.cancer)
+          .map(img => img.analysis.cancer.cancerPercentage || 0),
+        borderColor: '#ef4444',
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        tension: 0.4,
+        fill: true
+      }
+    ]
+  };
+
+  // Skin Conditions Chart Data
+  const infectionChartData = {
+    labels: images
+      .filter(img => img.analysis && img.analysis.infection)
+      .map(img => new Date(img.uploadedAt).toLocaleDateString()),
+    datasets: [
+      {
+        label: 'Infection Risk Score',
+        data: images
+          .filter(img => img.analysis && img.analysis.infection)
+          .map(img => {
+            const infection = img.analysis.infection;
+            // Convert condition to numeric score
+            if (infection.hasInfection) {
+              return infection.confidence || 50;
+            }
+            return 20; // Normal skin baseline
+          }),
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
         tension: 0.4,
         fill: true
       }
@@ -98,6 +128,7 @@ const Timeline = ({ user }) => {
 
   const chartOptions = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         display: true,
@@ -105,7 +136,7 @@ const Timeline = ({ user }) => {
       },
       title: {
         display: true,
-        text: 'Risk Trend Over Time'
+        text: 'Cancer Risk Trend Over Time'
       }
     },
     scales: {
@@ -117,6 +148,17 @@ const Timeline = ({ user }) => {
             return value + '%';
           }
         }
+      }
+    }
+  };
+
+  const infectionChartOptions = {
+    ...chartOptions,
+    plugins: {
+      ...chartOptions.plugins,
+      title: {
+        display: true,
+        text: 'Skin Condition Risk Over Time'
       }
     }
   };
@@ -186,10 +228,24 @@ const Timeline = ({ user }) => {
         </div>
       ) : (
         <>
-          {images.filter(img => img.analysis).length > 1 && (
+          {images.filter(img => img.analysis && img.analysis.cancer).length > 1 && (
             <div className="chart-section">
               <div className="chart-card">
-                <Line data={chartData} options={chartOptions} />
+                <h3>Cancer Risk Trend</h3>
+                <div style={{ height: '300px', marginTop: '20px' }}>
+                  <Line data={cancerChartData} options={chartOptions} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {images.filter(img => img.analysis && img.analysis.infection).length > 1 && (
+            <div className="chart-section">
+              <div className="chart-card">
+                <h3>Skin Condition Risk Trend</h3>
+                <div style={{ height: '300px', marginTop: '20px' }}>
+                  <Line data={infectionChartData} options={infectionChartOptions} />
+                </div>
               </div>
             </div>
           )}
@@ -218,16 +274,29 @@ const Timeline = ({ user }) => {
                     <Calendar size={16} />
                     {new Date(image.uploadedAt).toLocaleDateString()}
                   </div>
-                  {image.analysis ? (
+                  {image.analysis && image.analysis.cancer ? (
                     <div className="card-analysis">
                       <div className="risk-badge" style={{
-                        background: image.analysis.cancerPercentage < 15 ? '#dcfce7' :
-                                   image.analysis.cancerPercentage < 25 ? '#fef3c7' : '#fee2e2',
-                        color: image.analysis.cancerPercentage < 15 ? '#16a34a' :
-                               image.analysis.cancerPercentage < 25 ? '#d97706' : '#dc2626'
+                        background: image.analysis.cancer.cancerPercentage < 15 ? '#dcfce7' :
+                                   image.analysis.cancer.cancerPercentage < 25 ? '#fef3c7' : '#fee2e2',
+                        color: image.analysis.cancer.cancerPercentage < 15 ? '#16a34a' :
+                               image.analysis.cancer.cancerPercentage < 25 ? '#d97706' : '#dc2626'
                       }}>
-                        {image.analysis.cancerPercentage}% Risk
+                        {image.analysis.cancer.cancerPercentage}% Risk
                       </div>
+                      {image.analysis.infection && image.analysis.infection.hasInfection && (
+                        <div className="condition-badge" style={{
+                          background: '#dbeafe',
+                          color: '#1e40af',
+                          marginTop: '8px',
+                          padding: '4px 8px',
+                          borderRadius: '12px',
+                          fontSize: '0.85rem',
+                          display: 'inline-block'
+                        }}>
+                          {image.analysis.infection.primaryCondition}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="no-analysis">Pending Analysis</div>
@@ -252,30 +321,98 @@ const Timeline = ({ user }) => {
             className="modal-content"
             onClick={(e) => e.stopPropagation()}
           >
-            <button className="close-modal" onClick={() => setSelectedImage(null)}>×</button>
+            <div className="modal-header">
+              <h2>Image Review</h2>
+              <div className="modal-actions">
+                <motion.button
+                  onClick={() => setShowChatbot(!showChatbot)}
+                  whileHover={{ scale: 1.05 }}
+                  className="chatbot-toggle-button"
+                >
+                  <Sparkles size={18} />
+                  {showChatbot ? 'Hide' : 'Ask'} AI Assistant
+                </motion.button>
+                <button className="close-modal" onClick={() => {
+                  setSelectedImage(null);
+                  setShowChatbot(false);
+                }}>×</button>
+              </div>
+            </div>
+            
             <img
               src={selectedImage.cloudinaryUrl || `${API_BASE_URL}/${selectedImage.path}`}
               alt="Full size"
               className="modal-image"
             />
+            
             {selectedImage.analysis && (
               <div className="modal-analysis">
-                <h3>Analysis Details</h3>
-                <div className="analysis-stats">
-                  <div className="stat-item">
-                    <span className="stat-label">Risk Level:</span>
-                    <span className="stat-value">{selectedImage.analysis.cancerPercentage}%</span>
+                {selectedImage.analysis.cancer && (
+                  <div className="analysis-section">
+                    <h3>Cancer Risk Assessment</h3>
+                    <div className="analysis-stats">
+                      <div className="stat-item">
+                        <span className="stat-label">Risk Level:</span>
+                        <span className="stat-value">{selectedImage.analysis.cancer.cancerPercentage}%</span>
+                      </div>
+                      {selectedImage.analysis.cancer.sizes && (
+                        <div className="stat-item">
+                          <span className="stat-label">Size:</span>
+                          <span className="stat-value">
+                            {selectedImage.analysis.cancer.sizes.width} × {selectedImage.analysis.cancer.sizes.height}
+                          </span>
+                        </div>
+                      )}
+                      {selectedImage.analysis.cancer.confidence && (
+                        <div className="stat-item">
+                          <span className="stat-label">Confidence:</span>
+                          <span className="stat-value">{Math.round(selectedImage.analysis.cancer.confidence * 100)}%</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="stat-item">
-                    <span className="stat-label">Size:</span>
-                    <span className="stat-value">{selectedImage.analysis.sizes.width} × {selectedImage.analysis.sizes.height}</span>
+                )}
+
+                {selectedImage.analysis.infection && (
+                  <div className="analysis-section">
+                    <h3>Skin Condition Detection</h3>
+                    <div className="analysis-stats">
+                      <div className="stat-item">
+                        <span className="stat-label">Primary Condition:</span>
+                        <span className="stat-value">{selectedImage.analysis.infection.primaryCondition}</span>
+                      </div>
+                      <div className="stat-item">
+                        <span className="stat-label">Confidence:</span>
+                        <span className="stat-value">{selectedImage.analysis.infection.confidence}%</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {selectedImage.analysis.recommendations && selectedImage.analysis.recommendations.length > 0 && (
+                  <div className="recommendations-section">
+                    <h3>Recommendations</h3>
+                    <ul>
+                      {selectedImage.analysis.recommendations.map((rec, idx) => (
+                        <li key={idx}>{rec}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <MedicationRecommendations analysis={selectedImage.analysis} />
+
                 {selectedImage.notes && (
                   <div className="modal-notes">
                     <strong>Notes:</strong> {selectedImage.notes}
                   </div>
                 )}
+              </div>
+            )}
+
+            {showChatbot && (
+              <div className="modal-chatbot-section">
+                <Chatbot user={user} compact={true} />
               </div>
             )}
           </motion.div>

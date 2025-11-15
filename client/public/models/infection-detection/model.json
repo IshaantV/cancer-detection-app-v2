@@ -1,0 +1,16 @@
+{
+  "modelTopology": {
+    "class_name": "Sequential",
+    "config": {
+      "name": "sequential_1",
+      "layers": []
+    },
+    "keras_version": "2.13.1",
+    "backend": "tensorflow"
+  },
+  "weightsManifest": [],
+  "format": "layers-model",
+  "generatedBy": "2.13.1",
+  "convertedBy": "TensorFlow.js Converter",
+  "_note": "This is a placeholder. Replace with actual trained model."
+}
