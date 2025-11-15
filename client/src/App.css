@@ -1,0 +1,78 @@
+.App {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+  background-size: 400% 400%;
+  animation: gradientShift 30s ease infinite;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.App::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(circle at 20% 50%, rgba(255, 107, 107, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(255, 206, 84, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 40% 20%, rgba(75, 192, 192, 0.3) 0%, transparent 50%);
+  animation: float 40s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(15px, -15px) scale(1.05); }
+  66% { transform: translate(-10px, 10px) scale(0.95); }
+}
+
+/* Vibrant Color Scheme */
+:root {
+  --primary-purple: #8b5cf6;
+  --primary-blue: #3b82f6;
+  --primary-pink: #ec4899;
+  --primary-orange: #f97316;
+  --primary-cyan: #06b6d4;
+  --primary-green: #10b981;
+  --primary-yellow: #fbbf24;
+  --primary-red: #ef4444;
+  
+  --dark-purple: #6d28d9;
+  --dark-blue: #2563eb;
+  --dark-pink: #db2777;
+  --dark-orange: #ea580c;
+  
+  --light-purple: #c4b5fd;
+  --light-blue: #93c5fd;
+  --light-pink: #f9a8d4;
+  --light-orange: #fdba74;
+  --light-cyan: #67e8f9;
+  --light-green: #6ee7b7;
+  --light-yellow: #fde68a;
+  
+  --lighter-purple: #ede9fe;
+  --lighter-blue: #dbeafe;
+  --lighter-pink: #fce7f3;
+  --lighter-orange: #fed7aa;
+  --lighter-cyan: #cffafe;
+  --lighter-green: #d1fae5;
+  --lighter-yellow: #fef3c7;
+  
+  --white: #ffffff;
+  --text-dark: #1f2937;
+  --text-light: #6b7280;
+  --shadow: rgba(139, 92, 246, 0.3);
+  --shadow-blue: rgba(59, 130, 246, 0.3);
+  --shadow-pink: rgba(236, 72, 153, 0.3);
+  --shadow-orange: rgba(249, 115, 22, 0.3);
+}
+
