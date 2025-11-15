@@ -247,6 +247,16 @@
   box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
 }
 
+.menu-card:nth-child(5) .menu-icon-wrapper {
+  background: linear-gradient(135deg, #ec4899, #a12d67);
+  box-shadow: 0 8px 20px #ec4899;
+}
+
+.menu-card:nth-child(6) .menu-icon-wrapper {
+  background: linear-gradient(135deg, #06b6d4, #05859c);
+  box-shadow: 0 8px 20px #06b6d4;
+}
+
 .menu-icon-wrapper svg {
   color: white;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));

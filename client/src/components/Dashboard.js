@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Camera, Clock, MessageCircle, User, LogOut, Shield, TrendingUp, Share2 } from 'lucide-react';
+import { Camera, Clock, MessageCircle, User, LogOut, Shield, TrendingUp, Share2, Gamepad2 } from 'lucide-react';
 import './Dashboard.css';
 
 const Dashboard = ({ user, onLogout }) => {
@@ -42,6 +42,13 @@ const Dashboard = ({ user, onLogout }) => {
       description: 'Share SkinGuard with QR code',
       path: '/share',
       color: '#ec4899'
+    },
+    {
+      icon: Gamepad2,
+      title: 'Medication Game',
+      description: 'Track your medication intake',
+      path: '/game',
+      color: '#06b6d4'
     }
   ];
 
