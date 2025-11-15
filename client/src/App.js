@@ -10,6 +10,7 @@ import Chatbot from './components/Chatbot';
 import Profile from './components/Profile';
 import Share from './components/Share';
 import ApiTest from './components/ApiTest';
+import Game from './components/Game';
 import './App.css';
 
 function App() {
@@ -63,6 +64,10 @@ function App() {
           <Route 
             path="/chatbot" 
             element={user ? <Chatbot user={user} /> : <Navigate to="/login" />} 
+          />
+          <Route 
+            path="/game" 
+            element={user ? <Game user={user} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/profile" 
