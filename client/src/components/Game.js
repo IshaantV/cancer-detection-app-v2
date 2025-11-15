@@ -10,6 +10,8 @@ export default function Game({ user }){
   const [showImage, setShowImage] = useState(false)
   const [evoLevel, setEvoLevel] = useState(1)
   const [loading, setLoading] = useState(true)
+   const [isShaking, setIsShaking] = useState(false)
+  const [showSmoke, setShowSmoke] = useState(false)
 
   useEffect(() => {
     if (user && user.id) {
@@ -51,6 +53,10 @@ export default function Game({ user }){
     if (selectedMedication && frequency && frequencyNum >= 1 && frequencyNum <= 5) {
       setShowImage(true)
       setEvoLevel(Math.max(1, Math.min(4, frequencyNum)))
+      setIsShaking(true)
+      setShowSmoke(true)
+      setTimeout(() => setIsShaking(false), 600)
+      setTimeout(() => setShowSmoke(false), 1000)
       
       // Find the selected medication and mark it as taken
       const selectedMed = medications.find(med => med.id === selectedMedication)
@@ -114,10 +120,11 @@ export default function Game({ user }){
 
       {showImage && (
         <div className="imageContainer">
+          {showSmoke && <div className="smokePuff"></div>}
           <img 
             src={`/imgs/Penguin${evoLevel}.png`} 
             alt="Medication" 
-            className="medicationImage"
+            className={`medicationImage ${isShaking ? 'shake' : ''}`}
           />
         </div>
       )}
