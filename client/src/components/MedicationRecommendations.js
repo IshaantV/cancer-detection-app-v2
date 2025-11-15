@@ -1,10 +1,64 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Pill, AlertCircle } from 'lucide-react';
+import { Pill, AlertCircle, Plus, Check } from 'lucide-react';
+import api from '../utils/api';
+import '../styles/pixelated.css';
 import './MedicationRecommendations.css';
 
-const MedicationRecommendations = ({ analysis }) => {
+const MedicationRecommendations = ({ analysis, userId, onMedicationAdded }) => {
+  const [addedMedications, setAddedMedications] = useState([]);
+  const [adding, setAdding] = useState({});
+
   if (!analysis) return null;
+
+  const handleAddToSchedule = async (medication, index) => {
+    if (adding[index] || addedMedications.includes(index)) return;
+
+    setAdding({ ...adding, [index]: true });
+
+    try {
+      // Parse dosage to extract frequency
+      const dosage = medication.dosage.toLowerCase();
+      let frequency = 'daily';
+      let times = ['09:00'];
+
+      if (dosage.includes('twice') || dosage.includes('2 times')) {
+        frequency = 'twice';
+        times = ['09:00', '21:00'];
+      } else if (dosage.includes('three') || dosage.includes('3 times')) {
+        frequency = 'three';
+        times = ['09:00', '14:00', '21:00'];
+      }
+
+      // Parse duration to extract days
+      const durationMatch = medication.duration.match(/(\d+)/);
+      const duration = durationMatch ? parseInt(durationMatch[1]) : 7;
+
+      const medicationData = {
+        name: medication.name,
+        dosage: medication.dosage,
+        frequency,
+        times,
+        startDate: new Date().toISOString().split('T')[0],
+        duration
+      };
+
+      const response = await api.addMedication(userId, medicationData);
+
+      if (response && response.success) {
+        setAddedMedications([...addedMedications, index]);
+        if (onMedicationAdded) {
+          onMedicationAdded(response.medication);
+        }
+      }
+    } catch (error) {
+      console.error('Error adding medication:', error);
+      const errorMessage = error.message || 'Failed to add medication. Please try again.';
+      alert(errorMessage);
+    } finally {
+      setAdding({ ...adding, [index]: false });
+    }
+  };
 
   const getMedications = () => {
     const medications = [];
@@ -144,6 +198,27 @@ const MedicationRecommendations = ({ analysis }) => {
                 <AlertCircle size={16} />
                 Consult doctor before use
               </div>
+            )}
+            {userId && (
+              <motion.button
+                onClick={() => handleAddToSchedule(med, idx)}
+                disabled={adding[idx] || addedMedications.includes(idx)}
+                className={`add-to-schedule-button pixel-button ${addedMedications.includes(idx) ? 'added' : ''}`}
+                whileHover={!addedMedications.includes(idx) ? { scale: 1.05 } : {}}
+                whileTap={!addedMedications.includes(idx) ? { scale: 0.95 } : {}}
+              >
+                {addedMedications.includes(idx) ? (
+                  <>
+                    <Check size={16} />
+                    Added to Schedule
+                  </>
+                ) : (
+                  <>
+                    <Plus size={16} />
+                    Add to Schedule
+                  </>
+                )}
+              </motion.button>
             )}
           </motion.div>
         ))}

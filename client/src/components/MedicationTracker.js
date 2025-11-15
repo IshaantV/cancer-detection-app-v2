@@ -57,7 +57,8 @@ const MedicationTracker = ({ user }) => {
       }
     } catch (error) {
       console.error('Error adding medication:', error);
-      alert('Failed to add medication. Please try again.');
+      const errorMessage = error.message || 'Failed to add medication. Please try again.';
+      alert(errorMessage);
     }
   };
 

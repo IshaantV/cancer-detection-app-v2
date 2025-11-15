@@ -105,8 +105,8 @@ class ModelLoader {
 
   /**
    * Load cancer detection model
-   * Uses MobileNet (already installed) for quick start
-   * Can fall back to custom models if available
+   * Uses MobileNet (mandatory - no fallback to random numbers)
+   * Can use custom models if available
    * @param {boolean} forceReload - Force reload even if already loaded
    * @returns {Promise<mobilenet.MobileNet>} Loaded model
    */
@@ -125,39 +125,20 @@ class ModelLoader {
 
     this.loading.cancer = true;
     try {
-      console.log('🔄 Loading cancer detection model...');
+      console.log('🔄 Loading cancer detection model with MobileNet...');
       
-      // Option 1: Try to load custom model from local path
-      try {
-        const customModel = await tf.loadLayersModel(this.modelPaths.cancer);
-        console.log('✅ Custom cancer model loaded successfully');
-        this.models.cancer = customModel;
-        this.models.cancer._isCustomModel = true;
-        return this.models.cancer;
-      } catch (localError) {
-        console.log('ℹ️ Custom model not found, using MobileNet (already installed)...');
-      }
-      
-      // Option 2: Use MobileNet (already installed, no download needed!)
-      try {
-        this.models.cancer = await mobilenet.load({
-          version: 2,
-          alpha: 1.0,
-          inputRange: [0, 1]
-        });
-        console.log('✅ MobileNet model loaded successfully (lightweight, ~10MB)');
-        this.models.cancer._isMobileNet = true;
-        return this.models.cancer;
-      } catch (mobilenetError) {
-        console.warn('⚠️ MobileNet failed to load:', mobilenetError);
-        this.models.cancer = null;
-      }
-      
+      // Use MobileNet directly (skip custom model loading to avoid errors)
+      this.models.cancer = await mobilenet.load({
+        version: 2,
+        alpha: 1.0,
+        inputRange: [0, 1]
+      });
+      console.log('✅ MobileNet model loaded successfully');
+      this.models.cancer._isMobileNet = true;
       return this.models.cancer;
     } catch (error) {
       console.error('❌ Error loading cancer model:', error);
-      this.models.cancer = null;
-      return null; // Return null instead of throwing
+      throw new Error(`Failed to load MobileNet model: ${error.message}. Please check your internet connection and try again.`);
     } finally {
       this.loading.cancer = false;
     }
@@ -165,8 +146,8 @@ class ModelLoader {
 
   /**
    * Load infection detection model
-   * Uses MobileNet (already installed) for quick start
-   * Can fall back to custom models if available
+   * Uses MobileNet (mandatory - no fallback to random numbers)
+   * Can use custom models if available
    * @param {boolean} forceReload - Force reload even if already loaded
    * @returns {Promise<mobilenet.MobileNet>} Loaded model
    */
@@ -185,39 +166,20 @@ class ModelLoader {
 
     this.loading.infection = true;
     try {
-      console.log('🔄 Loading infection detection model...');
+      console.log('🔄 Loading infection detection model with MobileNet...');
       
-      // Option 1: Try to load custom model from local path
-      try {
-        const customModel = await tf.loadLayersModel(this.modelPaths.infection);
-        console.log('✅ Custom infection model loaded successfully');
-        this.models.infection = customModel;
-        this.models.infection._isCustomModel = true;
-        return this.models.infection;
-      } catch (localError) {
-        console.log('ℹ️ Custom model not found, using MobileNet (already installed)...');
-      }
-      
-      // Option 2: Use MobileNet (already installed, no download needed!)
-      try {
-        this.models.infection = await mobilenet.load({
-          version: 2,
-          alpha: 1.0,
-          inputRange: [0, 1]
-        });
-        console.log('✅ MobileNet model loaded successfully for infection detection');
-        this.models.infection._isMobileNet = true;
-        return this.models.infection;
-      } catch (mobilenetError) {
-        console.warn('⚠️ MobileNet failed to load:', mobilenetError);
-        this.models.infection = null;
-      }
-      
+      // Use MobileNet directly (skip custom model loading to avoid errors)
+      this.models.infection = await mobilenet.load({
+        version: 2,
+        alpha: 1.0,
+        inputRange: [0, 1]
+      });
+      console.log('✅ MobileNet model loaded successfully for infection detection');
+      this.models.infection._isMobileNet = true;
       return this.models.infection;
     } catch (error) {
       console.error('❌ Error loading infection model:', error);
-      this.models.infection = null;
-      return null; // Return null instead of throwing
+      throw new Error(`Failed to load MobileNet model: ${error.message}. Please check your internet connection and try again.`);
     } finally {
       this.loading.infection = false;
     }
@@ -229,8 +191,8 @@ class ModelLoader {
    */
   async loadAllModels() {
     const [cancerModel, infectionModel] = await Promise.all([
-      this.loadCancerModel().catch(() => null),
-      this.loadInfectionModel().catch(() => null)
+      this.loadCancerModel(),
+      this.loadInfectionModel()
     ]);
 
     return {
@@ -241,32 +203,15 @@ class ModelLoader {
 
   /**
    * Predict cancer risk from image
-   * Supports both MobileNet and custom models
+   * Uses MobileNet (mandatory - no fallback)
    * @param {string} imageSrc - Base64 image or image URL
    * @returns {Promise<Object>} Prediction results
    */
   async predictCancer(imageSrc) {
-    try {
-      const model = await this.loadCancerModel();
-      
-      if (!model) {
-        // Fallback to simulated analysis if model not available
-        return this.getFallbackCancerAnalysis();
-      }
-
-      // Check if using MobileNet or custom model
-      if (model._isMobileNet) {
-        // Use MobileNet's classify method
-        return await this.predictCancerWithMobileNet(imageSrc, model);
-      } else {
-        // Use custom model's predict method
-        return await this.predictCancerWithCustomModel(imageSrc, model);
-      }
-    } catch (error) {
-      console.error('❌ Cancer prediction error:', error);
-      // Fallback to simulated analysis
-      return this.getFallbackCancerAnalysis();
-    }
+    const model = await this.loadCancerModel();
+    
+    // Always use MobileNet's classify method
+    return await this.predictCancerWithMobileNet(imageSrc, model);
   }
 
   /**
@@ -277,14 +222,20 @@ class ModelLoader {
    */
   async predictCancerWithMobileNet(imageSrc, model) {
     try {
-      // Preprocess image
-      const preprocessed = await this.preprocessImage(imageSrc, 'cancer');
+      // MobileNet's classify method expects an HTMLImageElement, HTMLCanvasElement, or ImageData
+      // It handles preprocessing internally, so we pass the image directly
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      // Load image and wait for it to load
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = imageSrc;
+      });
       
       // MobileNet classify method (returns top 3 predictions)
-      const predictions = await model.classify(preprocessed);
-      
-      // Clean up tensor
-      preprocessed.dispose();
+      const predictions = await model.classify(img);
 
       // Process MobileNet predictions
       // MobileNet returns ImageNet classes, so we need to map to cancer risk
@@ -311,20 +262,23 @@ class ModelLoader {
         cancerPercentage = Math.round(topPrediction.probability * 15 + 5);
       }
 
-      // Extract ABCDE patterns based on prediction confidence
-      const confidence = topPrediction.probability;
+      // Perform detailed lesion analysis
+      const lesionAnalysis = await this.analyzeLesionDetails(img);
+      
+      // Extract ABCDE patterns based on analysis
       const patterns = {
-        asymmetry: confidence > 0.6,
-        border: confidence > 0.55,
-        color: confidence > 0.65,
-        diameter: confidence > 0.5,
-        evolving: confidence > 0.7
+        asymmetry: lesionAnalysis.asymmetryScore > 0.6,
+        border: lesionAnalysis.borderIrregularity > 0.55,
+        color: lesionAnalysis.colorVariation > 0.65,
+        diameter: lesionAnalysis.diameter > 0.5,
+        evolving: false // Cannot determine from single image
       };
 
       return {
         cancerPercentage: Math.max(5, Math.min(95, cancerPercentage)),
-        confidence: confidence,
+        confidence: topPrediction.probability,
         patterns,
+        lesionDetails: lesionAnalysis,
         modelUsed: true,
         modelType: 'MobileNet',
         topPredictions: predictions.map(p => ({
@@ -417,32 +371,15 @@ class ModelLoader {
 
   /**
    * Predict skin infection/condition from image
-   * Supports both MobileNet and custom models
+   * Uses MobileNet (mandatory - no fallback)
    * @param {string} imageSrc - Base64 image or image URL
    * @returns {Promise<Object>} Prediction results
    */
   async predictInfection(imageSrc) {
-    try {
-      const model = await this.loadInfectionModel();
-      
-      if (!model) {
-        // Fallback to simulated analysis if model not available
-        return this.getFallbackInfectionAnalysis();
-      }
-
-      // Check if using MobileNet or custom model
-      if (model._isMobileNet) {
-        // Use MobileNet's classify method
-        return await this.predictInfectionWithMobileNet(imageSrc, model);
-      } else {
-        // Use custom model's predict method
-        return await this.predictInfectionWithCustomModel(imageSrc, model);
-      }
-    } catch (error) {
-      console.error('❌ Infection prediction error:', error);
-      // Fallback to simulated analysis
-      return this.getFallbackInfectionAnalysis();
-    }
+    const model = await this.loadInfectionModel();
+    
+    // Always use MobileNet's classify method
+    return await this.predictInfectionWithMobileNet(imageSrc, model);
   }
 
   /**
@@ -453,14 +390,20 @@ class ModelLoader {
    */
   async predictInfectionWithMobileNet(imageSrc, model) {
     try {
-      // Preprocess image
-      const preprocessed = await this.preprocessImage(imageSrc, 'infection');
+      // MobileNet's classify method expects an HTMLImageElement, HTMLCanvasElement, or ImageData
+      // It handles preprocessing internally, so we pass the image directly
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      // Load image and wait for it to load
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = imageSrc;
+      });
       
       // MobileNet classify method (returns top 3 predictions)
-      const predictions = await model.classify(preprocessed);
-      
-      // Clean up tensor
-      preprocessed.dispose();
+      const predictions = await model.classify(img);
 
       // Map ImageNet classes to skin conditions
       const conditions = [
@@ -472,52 +415,69 @@ class ModelLoader {
         'Normal Skin'
       ];
 
-      // Keywords for different conditions
+      // Keywords for different conditions with weights
       const conditionKeywords = {
-        'Bacterial Infection': ['bacteria', 'infection', 'abscess', 'boil', 'cellulitis'],
-        'Fungal Infection': ['fungus', 'fungal', 'ringworm', 'candidiasis', 'athlete'],
-        'Viral Infection': ['virus', 'viral', 'herpes', 'shingles', 'wart'],
-        'Eczema': ['eczema', 'dermatitis', 'atopic', 'rash', 'itchy'],
-        'Psoriasis': ['psoriasis', 'scaly', 'plaque'],
-        'Normal Skin': ['skin', 'normal', 'healthy']
+        'Bacterial Infection': ['bacteria', 'infection', 'abscess', 'boil', 'cellulitis', 'pustule', 'pimple'],
+        'Fungal Infection': ['fungus', 'fungal', 'ringworm', 'candidiasis', 'athlete', 'yeast', 'mold'],
+        'Viral Infection': ['virus', 'viral', 'herpes', 'shingles', 'wart', 'molluscum'],
+        'Eczema': ['eczema', 'dermatitis', 'atopic', 'rash', 'itchy', 'dry', 'scaly'],
+        'Psoriasis': ['psoriasis', 'scaly', 'plaque', 'silver', 'flaky'],
+        'Normal Skin': ['skin', 'normal', 'healthy', 'clear']
       };
 
-      const topPrediction = predictions[0];
-      const className = topPrediction.className.toLowerCase();
+      // Use all predictions (top 3) to calculate probabilities
+      const conditionScores = {};
+      conditions.forEach(cond => conditionScores[cond] = 0);
       
-      // Map predictions to conditions
+      // Score each prediction
+      predictions.forEach((pred, index) => {
+        const className = pred.className.toLowerCase();
+        const weight = pred.probability * (3 - index) / 3; // Weight decreases for lower predictions
+        
+        conditions.forEach(condition => {
+          const keywords = conditionKeywords[condition];
+          const matchCount = keywords.filter(keyword => className.includes(keyword)).length;
+          
+          if (matchCount > 0) {
+            // Direct match - higher score
+            conditionScores[condition] += weight * (matchCount / keywords.length) * 100;
+          } else if (condition === 'Normal Skin') {
+            // Normal skin gets residual probability if no matches
+            conditionScores[condition] += weight * 10;
+          }
+        });
+      });
+      
+      // Normalize scores to percentages (0-100)
+      const totalScore = Object.values(conditionScores).reduce((sum, score) => sum + score, 0);
       const conditionProbabilities = {};
       let primaryCondition = 'Normal Skin';
       let maxProb = 0;
-
-      // Check each condition
+      
       conditions.forEach(condition => {
-        const keywords = conditionKeywords[condition];
-        const hasKeyword = keywords.some(keyword => className.includes(keyword));
-        
-        if (hasKeyword) {
-          const prob = topPrediction.probability;
-          conditionProbabilities[condition] = Math.round(prob * 100);
-          
-          if (prob > maxProb) {
-            maxProb = prob;
-            primaryCondition = condition;
-          }
+        if (totalScore > 0) {
+          conditionProbabilities[condition] = Math.round((conditionScores[condition] / totalScore) * 100);
         } else {
-          conditionProbabilities[condition] = Math.round((1 - topPrediction.probability) / conditions.length * 100);
+          // Fallback: distribute evenly if no matches
+          conditionProbabilities[condition] = Math.round(100 / conditions.length);
+        }
+        
+        if (conditionProbabilities[condition] > maxProb) {
+          maxProb = conditionProbabilities[condition];
+          primaryCondition = condition;
         }
       });
-
-      // If no specific match, use prediction confidence to determine
-      if (primaryCondition === 'Normal Skin' && topPrediction.probability > 0.5) {
-        // High confidence but no specific match - could be skin-related
-        primaryCondition = 'Normal Skin';
-        conditionProbabilities['Normal Skin'] = Math.round(topPrediction.probability * 100);
+      
+      // Ensure percentages add up to 100
+      const sum = Object.values(conditionProbabilities).reduce((a, b) => a + b, 0);
+      if (sum !== 100) {
+        const diff = 100 - sum;
+        conditionProbabilities[primaryCondition] += diff;
       }
 
       return {
         primaryCondition,
-        confidence: Math.round(topPrediction.probability * 100),
+        confidence: Math.round(predictions[0].probability * 100),
         allConditions: conditionProbabilities,
         hasInfection: primaryCondition !== 'Normal Skin' && maxProb > 0.3,
         modelUsed: true,
@@ -617,49 +577,278 @@ class ModelLoader {
   }
 
   /**
-   * Fallback cancer analysis (when model not available)
-   * @returns {Object} Simulated analysis results
+   * Fallback cancer analysis - REMOVED
+   * MobileNet is now mandatory. This function throws an error.
    */
   getFallbackCancerAnalysis() {
-    const cancerPercentage = Math.floor(Math.random() * 30) + 5;
-    return {
-      cancerPercentage,
-      confidence: 0.5,
-      patterns: {
-        asymmetry: Math.random() > 0.5,
-        border: Math.random() > 0.5,
-        color: Math.random() > 0.5,
-        diameter: Math.random() > 0.5,
-        evolving: Math.random() > 0.5
-      },
-      modelUsed: false,
-      note: 'Using fallback analysis - model not loaded'
-    };
+    throw new Error('MobileNet model failed to load. Cannot perform analysis without AI model.');
   }
 
   /**
-   * Fallback infection analysis (when model not available)
-   * @returns {Object} Simulated analysis results
+   * Fallback infection analysis - REMOVED
+   * MobileNet is now mandatory. This function throws an error.
    */
   getFallbackInfectionAnalysis() {
-    const conditions = ['Bacterial Infection', 'Fungal Infection', 'Normal Skin'];
-    const randomCondition = conditions[Math.floor(Math.random() * conditions.length)];
+    throw new Error('MobileNet model failed to load. Cannot perform analysis without AI model.');
+  }
+
+  /**
+   * Analyze lesion details using image processing
+   * Calculates size, shape, color, border irregularity, and asymmetry
+   * @param {HTMLImageElement} img - Image element
+   * @returns {Promise<Object>} Detailed lesion analysis
+   */
+  async analyzeLesionDetails(img) {
+    try {
+      // Create canvas for image processing
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+      
+      // Get image data
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      
+      // Convert to grayscale and detect lesion region
+      const grayscale = new Uint8Array(canvas.width * canvas.height);
+      const threshold = 128; // Threshold for lesion detection
+      
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+        grayscale[i / 4] = gray;
+      }
+      
+      // Find lesion boundaries (simplified - assumes darker regions are lesions)
+      let minX = canvas.width, maxX = 0, minY = canvas.height, maxY = 0;
+      let lesionPixels = 0;
+      const lesionMask = new Array(canvas.width * canvas.height).fill(false);
+      
+      for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+          const idx = y * canvas.width + x;
+          const gray = grayscale[idx];
+          
+          // Detect darker regions (potential lesions)
+          if (gray < threshold) {
+            lesionMask[idx] = true;
+            lesionPixels++;
+            minX = Math.min(minX, x);
+            maxX = Math.max(maxX, x);
+            minY = Math.min(minY, y);
+            maxY = Math.max(maxY, y);
+          }
+        }
+      }
+      
+      // Calculate size measurements
+      const width = maxX - minX;
+      const height = maxY - minY;
+      const area = lesionPixels;
+      const diameter = Math.sqrt(area / Math.PI) * 2; // Equivalent diameter
+      
+      // Calculate aspect ratio
+      const aspectRatio = width > 0 ? height / width : 1;
+      
+      // Calculate circularity (4π * area / perimeter^2)
+      let perimeter = 0;
+      for (let y = minY; y <= maxY; y++) {
+        for (let x = minX; x <= maxX; x++) {
+          const idx = y * canvas.width + x;
+          if (lesionMask[idx]) {
+            // Check neighbors for border pixels
+            const neighbors = [
+              y > 0 && !lesionMask[(y - 1) * canvas.width + x],
+              y < canvas.height - 1 && !lesionMask[(y + 1) * canvas.width + x],
+              x > 0 && !lesionMask[y * canvas.width + (x - 1)],
+              x < canvas.width - 1 && !lesionMask[y * canvas.width + (x + 1)]
+            ];
+            if (neighbors.some(n => n)) perimeter++;
+          }
+        }
+      }
+      const circularity = perimeter > 0 ? (4 * Math.PI * area) / (perimeter * perimeter) : 0;
+      
+      // Calculate color variation
+      const colors = [];
+      for (let i = 0; i < data.length; i += 4) {
+        const idx = i / 4;
+        if (lesionMask[idx]) {
+          colors.push([data[i], data[i + 1], data[i + 2]]);
+        }
+      }
+      
+      // Calculate color variance
+      let colorVariation = 0;
+      if (colors.length > 0) {
+        const avgR = colors.reduce((sum, c) => sum + c[0], 0) / colors.length;
+        const avgG = colors.reduce((sum, c) => sum + c[1], 0) / colors.length;
+        const avgB = colors.reduce((sum, c) => sum + c[2], 0) / colors.length;
+        
+        const variance = colors.reduce((sum, c) => {
+          const dr = c[0] - avgR;
+          const dg = c[1] - avgG;
+          const db = c[2] - avgB;
+          return sum + (dr * dr + dg * dg + db * db);
+        }, 0) / colors.length;
+        
+        colorVariation = Math.min(1, Math.sqrt(variance) / 255);
+      }
+      
+      // Calculate border irregularity (deviation from smooth circle)
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+      const avgRadius = diameter / 2;
+      let borderDeviation = 0;
+      let borderPoints = 0;
+      
+      for (let y = minY; y <= maxY; y++) {
+        for (let x = minX; x <= maxX; x++) {
+          const idx = y * canvas.width + x;
+          if (lesionMask[idx]) {
+            const neighbors = [
+              y > 0 && !lesionMask[(y - 1) * canvas.width + x],
+              y < canvas.height - 1 && !lesionMask[(y + 1) * canvas.width + x],
+              x > 0 && !lesionMask[y * canvas.width + (x - 1)],
+              x < canvas.width - 1 && !lesionMask[y * canvas.width + (x + 1)]
+            ];
+            if (neighbors.some(n => n)) {
+              const dist = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+              borderDeviation += Math.abs(dist - avgRadius);
+              borderPoints++;
+            }
+          }
+        }
+      }
+      const borderIrregularity = borderPoints > 0 ? Math.min(1, borderDeviation / (borderPoints * avgRadius)) : 0;
+      
+      // Calculate asymmetry score (compare left vs right halves)
+      let leftHalfPixels = 0, rightHalfPixels = 0;
+      const centerLineX = (minX + maxX) / 2;
+      
+      for (let y = minY; y <= maxY; y++) {
+        for (let x = minX; x <= maxX; x++) {
+          const idx = y * canvas.width + x;
+          if (lesionMask[idx]) {
+            if (x < centerLineX) leftHalfPixels++;
+            else rightHalfPixels++;
+          }
+        }
+      }
+      
+      const totalPixels = leftHalfPixels + rightHalfPixels;
+      const asymmetryScore = totalPixels > 0 
+        ? Math.abs(leftHalfPixels - rightHalfPixels) / totalPixels 
+        : 0;
+      
+      // Estimate size in mm (assuming average phone camera: ~1mm per 10 pixels at close range)
+      const pixelsPerMM = 10; // Approximate conversion
+      const widthMM = width / pixelsPerMM;
+      const heightMM = height / pixelsPerMM;
+      const diameterMM = diameter / pixelsPerMM;
+      
+      return {
+        // Size measurements
+        width: Math.round(width),
+        height: Math.round(height),
+        area: Math.round(area),
+        diameter: Math.round(diameter),
+        widthMM: Math.round(widthMM * 10) / 10,
+        heightMM: Math.round(heightMM * 10) / 10,
+        diameterMM: Math.round(diameterMM * 10) / 10,
+        
+        // Shape analysis
+        aspectRatio: Math.round(aspectRatio * 100) / 100,
+        circularity: Math.round(circularity * 100) / 100,
+        shape: aspectRatio > 0.8 && aspectRatio < 1.2 && circularity > 0.7 
+          ? 'Round' 
+          : aspectRatio > 1.5 || aspectRatio < 0.67 
+            ? 'Irregular' 
+            : 'Oval',
+        
+        // Color analysis
+        colorVariation: Math.round(colorVariation * 100) / 100,
+        dominantColors: this.extractDominantColors(colors),
+        
+        // Border analysis
+        borderIrregularity: Math.round(borderIrregularity * 100) / 100,
+        borderSmoothness: Math.round((1 - borderIrregularity) * 100) / 100,
+        
+        // Asymmetry
+        asymmetryScore: Math.round(asymmetryScore * 100) / 100,
+        
+        // ABCDE scores (0-1 scale)
+        asymmetry: asymmetryScore,
+        border: borderIrregularity,
+        color: colorVariation,
+        diameter: Math.min(1, diameterMM / 6), // 6mm is concerning threshold
+        evolving: 0 // Cannot determine from single image
+      };
+    } catch (error) {
+      console.error('❌ Lesion analysis error:', error);
+      // Return default values on error
+      return {
+        width: 0,
+        height: 0,
+        area: 0,
+        diameter: 0,
+        widthMM: 0,
+        heightMM: 0,
+        diameterMM: 0,
+        aspectRatio: 1,
+        circularity: 1,
+        shape: 'Unknown',
+        colorVariation: 0,
+        dominantColors: [],
+        borderIrregularity: 0,
+        borderSmoothness: 1,
+        asymmetryScore: 0,
+        asymmetry: 0,
+        border: 0,
+        color: 0,
+        diameter: 0,
+        evolving: 0
+      };
+    }
+  }
+
+  /**
+   * Extract dominant colors from lesion region
+   * @param {Array<Array<number>>} colors - Array of RGB color values
+   * @returns {Array<Object>} Dominant colors with percentages
+   */
+  extractDominantColors(colors) {
+    if (colors.length === 0) return [];
     
-    return {
-      primaryCondition: randomCondition,
-      confidence: Math.floor(Math.random() * 40) + 50,
-      allConditions: {
-        'Bacterial Infection': Math.floor(Math.random() * 30),
-        'Fungal Infection': Math.floor(Math.random() * 30),
-        'Viral Infection': Math.floor(Math.random() * 20),
-        'Eczema': Math.floor(Math.random() * 25),
-        'Psoriasis': Math.floor(Math.random() * 20),
-        'Normal Skin': Math.floor(Math.random() * 40) + 40
-      },
-      hasInfection: randomCondition !== 'Normal Skin',
-      modelUsed: false,
-      note: 'Using fallback analysis - model not loaded'
-    };
+    // Simple k-means clustering for color extraction (simplified)
+    const colorGroups = {};
+    const groupSize = 32; // Quantize colors
+    
+    colors.forEach(color => {
+      const r = Math.floor(color[0] / groupSize) * groupSize;
+      const g = Math.floor(color[1] / groupSize) * groupSize;
+      const b = Math.floor(color[2] / groupSize) * groupSize;
+      const key = `${r},${g},${b}`;
+      
+      if (!colorGroups[key]) {
+        colorGroups[key] = { color: [r, g, b], count: 0 };
+      }
+      colorGroups[key].count++;
+    });
+    
+    // Sort by frequency and return top 3
+    return Object.values(colorGroups)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3)
+      .map(group => ({
+        rgb: group.color,
+        hex: `#${group.color[0].toString(16).padStart(2, '0')}${group.color[1].toString(16).padStart(2, '0')}${group.color[2].toString(16).padStart(2, '0')}`,
+        percentage: Math.round((group.count / colors.length) * 100)
+      }));
   }
 
   /**

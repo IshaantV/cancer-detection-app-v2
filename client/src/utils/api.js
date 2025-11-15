@@ -215,6 +215,11 @@ export const api = {
       return await handleResponse(response);
     } catch (error) {
       console.error('Add medication API error:', error);
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        const enhancedError = new Error('Cannot connect to server. Please make sure the backend server is running on port 5000.\n\nTo start the server:\n1. Open a terminal\n2. Run: cd server && node index.js\n3. You should see: "Server running on port 5000"');
+        enhancedError.originalError = error;
+        throw enhancedError;
+      }
       throw error;
     }
   },
@@ -241,6 +246,84 @@ export const api = {
       return await handleResponse(response);
     } catch (error) {
       console.error('Delete medication API error:', error);
+      throw error;
+    }
+  },
+
+  // Gamification endpoints
+  getGamification: async (userId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/gamification/${userId}`);
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Get gamification API error:', error);
+      throw error;
+    }
+  },
+
+  awardXP: async (userId, xp, action) => {
+    try {
+      console.log('🎁 Awarding XP:', { userId, xp, action });
+      const response = await fetch(`${API_BASE_URL}/api/gamification/${userId}/award-xp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ xp, action })
+      });
+      const result = await handleResponse(response);
+      console.log('✅ XP awarded successfully:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Award XP API error:', error);
+      throw error;
+    }
+  },
+
+  checkIn: async (userId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/gamification/${userId}/check-in`, {
+        method: 'POST'
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Check-in API error:', error);
+      throw error;
+    }
+  },
+
+  getAchievements: async (userId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/gamification/${userId}/achievements`);
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Get achievements API error:', error);
+      throw error;
+    }
+  },
+
+  unlockAchievement: async (userId, achievementId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/gamification/${userId}/unlock-achievement`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ achievementId })
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Unlock achievement API error:', error);
+      throw error;
+    }
+  },
+
+  updateGamificationStats: async (userId, stats, streaks) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/gamification/${userId}/update-stats`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stats, streaks })
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Update gamification stats API error:', error);
       throw error;
     }
   }

@@ -1,0 +1,317 @@
+/**
+ * Pixelated Habitica-style theme
+ * Bright colors and 8-bit aesthetic
+ */
+
+:root {
+  /* Habitica Color Palette */
+  --pixel-red: #FF6B6B;
+  --pixel-cyan: #4ECDC4;
+  --pixel-yellow: #FFE66D;
+  --pixel-green: #95E1D3;
+  --pixel-purple: #A8E6CF;
+  --pixel-orange: #FFA07A;
+  --pixel-pink: #FFB6C1;
+  --pixel-blue: #87CEEB;
+  
+  /* Background Colors */
+  --pixel-bg-light: #F7F7F7;
+  --pixel-bg-dark: #2C3E50;
+  --pixel-bg-card: #FFFFFF;
+  
+  /* Text Colors */
+  --pixel-text-dark: #2C3E50;
+  --pixel-text-light: #7F8C8D;
+  --pixel-text-white: #FFFFFF;
+  
+  /* Border Colors */
+  --pixel-border-dark: #34495E;
+  --pixel-border-light: #BDC3C7;
+  
+  /* Pixelated Effects */
+  --pixel-shadow: 4px 4px 0px rgba(0, 0, 0, 0.2);
+  --pixel-shadow-hover: 6px 6px 0px rgba(0, 0, 0, 0.3);
+}
+
+/* Pixelated rendering */
+.pixelated {
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-crisp-edges;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* Pixelated borders using box-shadow technique */
+.pixel-border {
+  border: 4px solid var(--pixel-border-dark);
+  box-shadow: 
+    inset 0 0 0 2px var(--pixel-bg-card),
+    0 0 0 2px var(--pixel-border-dark),
+    4px 4px 0px rgba(0, 0, 0, 0.2);
+}
+
+.pixel-border-red {
+  border: 4px solid var(--pixel-red);
+  box-shadow: 
+    inset 0 0 0 2px var(--pixel-bg-card),
+    0 0 0 2px var(--pixel-red),
+    4px 4px 0px rgba(255, 107, 107, 0.3);
+}
+
+.pixel-border-cyan {
+  border: 4px solid var(--pixel-cyan);
+  box-shadow: 
+    inset 0 0 0 2px var(--pixel-bg-card),
+    0 0 0 2px var(--pixel-cyan),
+    4px 4px 0px rgba(78, 205, 196, 0.3);
+}
+
+.pixel-border-yellow {
+  border: 4px solid var(--pixel-yellow);
+  box-shadow: 
+    inset 0 0 0 2px var(--pixel-bg-card),
+    0 0 0 2px var(--pixel-yellow),
+    4px 4px 0px rgba(255, 230, 109, 0.3);
+}
+
+.pixel-border-green {
+  border: 4px solid var(--pixel-green);
+  box-shadow: 
+    inset 0 0 0 2px var(--pixel-bg-card),
+    0 0 0 2px var(--pixel-green),
+    4px 4px 0px rgba(149, 225, 211, 0.3);
+}
+
+/* Pixelated buttons */
+.pixel-button {
+  background: var(--pixel-yellow);
+  color: var(--pixel-text-dark);
+  border: 4px solid var(--pixel-border-dark);
+  padding: 12px 24px;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  box-shadow: var(--pixel-shadow);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-family: 'Courier New', monospace;
+}
+
+.pixel-button:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--pixel-shadow-hover);
+}
+
+.pixel-button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.2);
+}
+
+.pixel-button-red {
+  background: var(--pixel-red);
+  color: var(--pixel-text-white);
+}
+
+.pixel-button-cyan {
+  background: var(--pixel-cyan);
+  color: var(--pixel-text-dark);
+}
+
+.pixel-button-green {
+  background: var(--pixel-green);
+  color: var(--pixel-text-dark);
+}
+
+/* Pixelated cards */
+.pixel-card {
+  background: var(--pixel-bg-card);
+  border: 4px solid var(--pixel-border-dark);
+  padding: 20px;
+  box-shadow: var(--pixel-shadow);
+  transition: all 0.2s ease;
+}
+
+.pixel-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--pixel-shadow-hover);
+}
+
+/* Pixelated progress bars */
+.pixel-progress-bar {
+  background: var(--pixel-bg-light);
+  border: 3px solid var(--pixel-border-dark);
+  height: 30px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 2px 2px 0px rgba(0, 0, 0, 0.1);
+}
+
+.pixel-progress-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+  box-shadow: inset -2px -2px 0px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.pixel-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 4px,
+    rgba(255, 255, 255, 0.1) 4px,
+    rgba(255, 255, 255, 0.1) 8px
+  );
+}
+
+.pixel-progress-red {
+  background: var(--pixel-red);
+}
+
+.pixel-progress-cyan {
+  background: var(--pixel-cyan);
+}
+
+.pixel-progress-yellow {
+  background: var(--pixel-yellow);
+}
+
+.pixel-progress-green {
+  background: var(--pixel-green);
+}
+
+/* Pixelated text */
+.pixel-text {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.2);
+}
+
+.pixel-text-large {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.pixel-text-medium {
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.pixel-text-small {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* Pixelated badges */
+.pixel-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border: 3px solid var(--pixel-border-dark);
+  background: var(--pixel-yellow);
+  color: var(--pixel-text-dark);
+  font-weight: bold;
+  font-size: 12px;
+  text-transform: uppercase;
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.2);
+  font-family: 'Courier New', monospace;
+}
+
+/* Pixelated animations */
+@keyframes pixel-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pixel-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px var(--pixel-yellow);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--pixel-yellow), 0 0 30px var(--pixel-yellow);
+  }
+}
+
+@keyframes pixel-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.pixel-bounce {
+  animation: pixel-bounce 0.5s ease;
+}
+
+.pixel-glow {
+  animation: pixel-glow 1s ease infinite;
+}
+
+.pixel-shake {
+  animation: pixel-shake 0.5s ease;
+}
+
+/* Level up animation */
+@keyframes level-up {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.level-up-animation {
+  animation: level-up 0.6s ease;
+}
+
+/* Achievement unlock animation */
+@keyframes achievement-unlock {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(360deg);
+    opacity: 1;
+  }
+}
+
+.achievement-unlock {
+  animation: achievement-unlock 0.8s ease;
+}
+
+/* XP gain animation */
+@keyframes xp-gain {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-50px) scale(1.5);
+    opacity: 0;
+  }
+}
+
+.xp-gain-animation {
+  animation: xp-gain 1s ease forwards;
+}
+

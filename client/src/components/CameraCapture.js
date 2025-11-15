@@ -58,42 +58,31 @@ const CameraCapture = ({ user }) => {
 
     setLoading(true);
     try {
-      // Use model loader for AI analysis
-      console.log('🔍 Starting AI analysis...');
+      // Use MobileNet for AI analysis (mandatory - no fallback)
+      console.log('🔍 Starting AI analysis with MobileNet...');
       
-      // Option 1: Use client-side TensorFlow.js models
-      let analysisResults;
-      try {
-        analysisResults = await modelLoader.analyzeImage(capturedImage);
-        console.log('✅ Client-side analysis complete:', analysisResults);
-      } catch (clientError) {
-        console.warn('⚠️ Client-side analysis failed, trying server-side:', clientError);
-        
-        // Option 2: Fallback to server-side API analysis
-        try {
-          const formData = new FormData();
-          const blob = await fetch(capturedImage).then(r => r.blob());
-          formData.append('image', blob, 'capture.jpg');
-          
-          const serverAnalysisResponse = await api.analyzeImageServer(formData);
-          analysisResults = serverAnalysisResponse.analysis;
-          console.log('✅ Server-side analysis complete:', analysisResults);
-        } catch (serverError) {
-          console.error('❌ Both client and server analysis failed:', serverError);
-          // Use fallback
-          analysisResults = {
-            cancer: modelLoader.getFallbackCancerAnalysis(),
-            infection: modelLoader.getFallbackInfectionAnalysis(),
-            analyzedAt: new Date().toISOString()
-          };
-        }
-      }
+      const analysisResults = await modelLoader.analyzeImage(capturedImage);
+      console.log('✅ MobileNet analysis complete:', analysisResults);
 
-      // Calculate size measurements (can be enhanced with image processing)
+      // Calculate size measurements from image (basic estimation)
+      // Note: This is a simple estimation - for accurate measurements, 
+      // you'd need calibration or object detection
+      const img = new Image();
+      img.src = capturedImage;
+      await new Promise((resolve) => {
+        img.onload = resolve;
+      });
+      
+      // Estimate sizes based on image dimensions (assuming ~1mm per 10 pixels at typical phone distance)
+      const pixelToMM = 0.1; // Rough estimate - adjust based on your camera setup
+      const estimatedWidth = (img.width * pixelToMM).toFixed(2);
+      const estimatedHeight = (img.height * pixelToMM).toFixed(2);
+      const estimatedArea = (parseFloat(estimatedWidth) * parseFloat(estimatedHeight)).toFixed(2);
+      
       const sizes = {
-        width: (Math.random() * 10 + 2).toFixed(2) + 'mm',
-        height: (Math.random() * 10 + 2).toFixed(2) + 'mm',
-        area: (Math.random() * 50 + 10).toFixed(2) + 'mm²'
+        width: `${estimatedWidth}mm`,
+        height: `${estimatedHeight}mm`,
+        area: `${estimatedArea}mm²`
       };
 
       // Generate recommendations based on results
@@ -138,6 +127,23 @@ const CameraCapture = ({ user }) => {
         
         if (analyzeResponse.success) {
           console.log('✅ Analysis saved successfully');
+          
+          // Check if XP was awarded and gamification updated
+          if (analyzeResponse.gamification) {
+            console.log('✅ XP awarded!', analyzeResponse.gamification);
+            console.log('📊 Updated stats:', {
+              xp: analyzeResponse.gamification.xp,
+              level: analyzeResponse.gamification.level,
+              scansCompleted: analyzeResponse.gamification.stats?.scansCompleted
+            });
+            if (analyzeResponse.leveledUp) {
+              console.log('🎉 Level up! New level:', analyzeResponse.newLevel);
+              // Show level up notification
+              setTimeout(() => {
+                alert(`🎉 Level Up! You've reached level ${analyzeResponse.newLevel}!`);
+              }, 500);
+            }
+          }
         } else {
           console.error('❌ Failed to save analysis:', analyzeResponse);
         }
@@ -345,13 +351,148 @@ const CameraCapture = ({ user }) => {
                     </div>
                   </div>
 
-                  {analysis.cancer.sizes && (
+                  {analysis.cancer.lesionDetails && (
                     <div className="detail-section">
-                      <h5>Size Measurements</h5>
-                      <div className="size-info">
-                        <p>Width: {analysis.cancer.sizes.width}</p>
-                        <p>Height: {analysis.cancer.sizes.height}</p>
-                        <p>Area: {analysis.cancer.sizes.area}</p>
+                      <h5>Detailed Lesion Analysis</h5>
+                      
+                      <div className="lesion-measurements">
+                        <div className="measurement-group">
+                          <h6>Size Measurements</h6>
+                          <div className="measurement-grid">
+                            <div className="measurement-item">
+                              <span className="measurement-label">Width:</span>
+                              <span className="measurement-value">{analysis.cancer.lesionDetails.widthMM} mm</span>
+                            </div>
+                            <div className="measurement-item">
+                              <span className="measurement-label">Height:</span>
+                              <span className="measurement-value">{analysis.cancer.lesionDetails.heightMM} mm</span>
+                            </div>
+                            <div className="measurement-item">
+                              <span className="measurement-label">Diameter:</span>
+                              <span className="measurement-value">{analysis.cancer.lesionDetails.diameterMM} mm</span>
+                            </div>
+                            <div className="measurement-item">
+                              <span className="measurement-label">Area:</span>
+                              <span className="measurement-value">{analysis.cancer.lesionDetails.area} px²</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="measurement-group">
+                          <h6>Shape Analysis</h6>
+                          <div className="measurement-grid">
+                            <div className="measurement-item">
+                              <span className="measurement-label">Shape:</span>
+                              <span className="measurement-value">{analysis.cancer.lesionDetails.shape}</span>
+                            </div>
+                            <div className="measurement-item">
+                              <span className="measurement-label">Aspect Ratio:</span>
+                              <span className="measurement-value">{analysis.cancer.lesionDetails.aspectRatio}</span>
+                            </div>
+                            <div className="measurement-item">
+                              <span className="measurement-label">Circularity:</span>
+                              <span className="measurement-value">{analysis.cancer.lesionDetails.circularity}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="measurement-group">
+                          <h6>Color Analysis</h6>
+                          <div className="measurement-grid">
+                            <div className="measurement-item">
+                              <span className="measurement-label">Color Variation:</span>
+                              <span className="measurement-value">{(analysis.cancer.lesionDetails.colorVariation * 100).toFixed(1)}%</span>
+                            </div>
+                            {analysis.cancer.lesionDetails.dominantColors && analysis.cancer.lesionDetails.dominantColors.length > 0 && (
+                              <div className="measurement-item full-width">
+                                <span className="measurement-label">Dominant Colors:</span>
+                                <div className="color-swatches">
+                                  {analysis.cancer.lesionDetails.dominantColors.map((color, idx) => (
+                                    <div key={idx} className="color-swatch" style={{ backgroundColor: color.hex }}>
+                                      <span className="color-percentage">{color.percentage}%</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="measurement-group">
+                          <h6>Border & Asymmetry</h6>
+                          <div className="measurement-grid">
+                            <div className="measurement-item">
+                              <span className="measurement-label">Border Irregularity:</span>
+                              <span className="measurement-value">{(analysis.cancer.lesionDetails.borderIrregularity * 100).toFixed(1)}%</span>
+                            </div>
+                            <div className="measurement-item">
+                              <span className="measurement-label">Border Smoothness:</span>
+                              <span className="measurement-value">{(analysis.cancer.lesionDetails.borderSmoothness * 100).toFixed(1)}%</span>
+                            </div>
+                            <div className="measurement-item">
+                              <span className="measurement-label">Asymmetry Score:</span>
+                              <span className="measurement-value">{(analysis.cancer.lesionDetails.asymmetryScore * 100).toFixed(1)}%</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="measurement-group">
+                          <h6>ABCDE Scores</h6>
+                          <div className="abcde-scores">
+                            <div className="score-item">
+                              <span className="score-label">A (Asymmetry):</span>
+                              <div className="score-bar">
+                                <div 
+                                  className="score-fill" 
+                                  style={{ 
+                                    width: `${analysis.cancer.lesionDetails.asymmetry * 100}%`,
+                                    backgroundColor: analysis.cancer.lesionDetails.asymmetry > 0.6 ? '#ef4444' : '#22c55e'
+                                  }}
+                                />
+                                <span className="score-value">{(analysis.cancer.lesionDetails.asymmetry * 100).toFixed(0)}%</span>
+                              </div>
+                            </div>
+                            <div className="score-item">
+                              <span className="score-label">B (Border):</span>
+                              <div className="score-bar">
+                                <div 
+                                  className="score-fill" 
+                                  style={{ 
+                                    width: `${analysis.cancer.lesionDetails.border * 100}%`,
+                                    backgroundColor: analysis.cancer.lesionDetails.border > 0.55 ? '#ef4444' : '#22c55e'
+                                  }}
+                                />
+                                <span className="score-value">{(analysis.cancer.lesionDetails.border * 100).toFixed(0)}%</span>
+                              </div>
+                            </div>
+                            <div className="score-item">
+                              <span className="score-label">C (Color):</span>
+                              <div className="score-bar">
+                                <div 
+                                  className="score-fill" 
+                                  style={{ 
+                                    width: `${analysis.cancer.lesionDetails.color * 100}%`,
+                                    backgroundColor: analysis.cancer.lesionDetails.color > 0.65 ? '#ef4444' : '#22c55e'
+                                  }}
+                                />
+                                <span className="score-value">{(analysis.cancer.lesionDetails.color * 100).toFixed(0)}%</span>
+                              </div>
+                            </div>
+                            <div className="score-item">
+                              <span className="score-label">D (Diameter):</span>
+                              <div className="score-bar">
+                                <div 
+                                  className="score-fill" 
+                                  style={{ 
+                                    width: `${analysis.cancer.lesionDetails.diameter * 100}%`,
+                                    backgroundColor: analysis.cancer.lesionDetails.diameter > 0.5 ? '#ef4444' : '#22c55e'
+                                  }}
+                                />
+                                <span className="score-value">{(analysis.cancer.lesionDetails.diameter * 100).toFixed(0)}%</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}

@@ -34,6 +34,62 @@ let images = [];
 let chatHistory = [];
 let medications = [];
 
+// Helper function to initialize gamification for user
+const initializeGamification = (user) => {
+  if (!user.gamification) {
+    user.gamification = {
+      xp: 0,
+      level: 1,
+      hp: 50,
+      mp: 20,
+      gold: 0,
+      achievements: [],
+      streaks: {
+        dailyCheckIn: 0,
+        medicationAdherence: 0,
+        weeklyScans: 0
+      },
+      stats: {
+        scansCompleted: 0,
+        medicationsTaken: 0,
+        chatbotInteractions: 0,
+        daysActive: 1,
+        lastCheckIn: null,
+        lastActivityDate: new Date().toISOString()
+      }
+    };
+  } else {
+    // Ensure level is always calculated from XP (fixes any inconsistencies)
+    user.gamification.level = calculateLevel(user.gamification.xp);
+  }
+  return user.gamification;
+};
+
+// Helper function to calculate level from XP
+// Level formula: level = floor(sqrt(xp / 100)) + 1
+// This means: Level 1 = 0-99 XP, Level 2 = 100-399 XP, Level 3 = 400-899 XP, etc.
+const calculateLevel = (xp) => {
+  if (xp < 0) return 1;
+  return Math.floor(Math.sqrt(xp / 100)) + 1;
+};
+
+// Helper function to calculate XP needed for next level
+const getXPForNextLevel = (currentLevel) => {
+  return Math.pow(currentLevel, 2) * 100;
+};
+
+// Helper function to update HP/MP based on activity
+const updateHPMP = (gamification) => {
+  const daysSinceLastActivity = gamification.stats.lastActivityDate 
+    ? Math.floor((new Date() - new Date(gamification.stats.lastActivityDate)) / (1000 * 60 * 60 * 24))
+    : 0;
+  
+  gamification.hp = Math.max(0, 50 - (daysSinceLastActivity * 5));
+  gamification.mp = Math.min(50, 20 + (gamification.stats.scansCompleted * 2));
+  
+  return gamification;
+};
+
 // Routes
 app.post('/api/register', (req, res) => {
   const { name, email, password, quizAnswers } = req.body;
@@ -168,7 +224,50 @@ app.post('/api/analyze/:imageId', (req, res) => {
       recommendations: recommendations || [],
       analyzedAt: new Date()
     };
-    res.json({ success: true, analysis: image.analysis });
+    
+    // Award XP for completing scan
+    const user = users.find(u => u.id === image.userId);
+    let gamificationData = null;
+    let leveledUp = false;
+    let newLevel = null;
+    
+    if (user) {
+      const gamification = initializeGamification(user);
+      const oldXP = gamification.xp;
+      const oldLevel = gamification.level || calculateLevel(oldXP);
+      
+      gamification.xp += 50; // Scan completion XP
+      gamification.stats.scansCompleted += 1;
+      gamification.stats.lastActivityDate = new Date().toISOString();
+      
+      updateHPMP(gamification);
+      
+      // Calculate new level AFTER adding XP
+      newLevel = calculateLevel(gamification.xp);
+      leveledUp = newLevel > oldLevel;
+      
+      // Update level in gamification object
+      gamification.level = newLevel;
+      
+      if (leveledUp) {
+        gamification.xp += 200; // Level up bonus
+        gamification.gold += newLevel * 10;
+        // Recalculate level after bonus XP
+        gamification.level = calculateLevel(gamification.xp);
+        newLevel = gamification.level;
+      }
+      
+      // Return gamification data so frontend can update
+      gamificationData = { ...gamification };
+    }
+    
+    res.json({ 
+      success: true, 
+      analysis: image.analysis,
+      gamification: gamificationData,
+      leveledUp: leveledUp,
+      newLevel: leveledUp ? newLevel : null
+    });
   } else {
     res.status(404).json({ error: 'Image not found' });
   }
@@ -207,45 +306,11 @@ app.post('/api/analyze-server', upload.single('image'), async (req, res) => {
     // };
     // const result = await rekognition.detectLabels(params).promise();
 
-    // Simulated server-side analysis (replace with real implementation)
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate processing time
-
-    const analysis = {
-      cancer: {
-        cancerPercentage: Math.floor(Math.random() * 30) + 5,
-        confidence: 0.75 + Math.random() * 0.2,
-        patterns: {
-          asymmetry: Math.random() > 0.5,
-          border: Math.random() > 0.5,
-          color: Math.random() > 0.5,
-          diameter: Math.random() > 0.5,
-          evolving: Math.random() > 0.5
-        },
-        modelUsed: true,
-        source: 'server'
-      },
-      infection: {
-        primaryCondition: ['Bacterial Infection', 'Fungal Infection', 'Normal Skin'][Math.floor(Math.random() * 3)],
-        confidence: Math.floor(Math.random() * 40) + 50,
-        allConditions: {
-          'Bacterial Infection': Math.floor(Math.random() * 30),
-          'Fungal Infection': Math.floor(Math.random() * 30),
-          'Viral Infection': Math.floor(Math.random() * 20),
-          'Eczema': Math.floor(Math.random() * 25),
-          'Psoriasis': Math.floor(Math.random() * 20),
-          'Normal Skin': Math.floor(Math.random() * 40) + 40
-        },
-        hasInfection: Math.random() > 0.5,
-        modelUsed: true,
-        source: 'server'
-      },
-      analyzedAt: new Date().toISOString()
-    };
-
-    res.json({ 
-      success: true, 
-      analysis,
-      note: 'Server-side analysis complete. Replace this with actual ML API integration.'
+    // Note: Server-side analysis requires MobileNet or another ML library
+    // For now, return an error directing to use client-side MobileNet
+    res.status(501).json({ 
+      error: 'Server-side analysis not implemented. Please use client-side MobileNet analysis.',
+      note: 'The app uses MobileNet running in your browser for AI analysis. Make sure JavaScript is enabled.'
     });
   } catch (error) {
     console.error('❌ Server-side analysis error:', error);
@@ -717,6 +782,17 @@ app.post('/api/chat', async (req, res) => {
     };
     
     chatHistory.push({ userId, message, response, timestamp: new Date() });
+    
+    // Award XP for chatbot interaction
+    // Note: user is already declared at the top of this function
+    if (user) {
+      const gamification = initializeGamification(user);
+      gamification.xp += 10; // Chatbot XP
+      gamification.stats.chatbotInteractions += 1;
+      gamification.stats.lastActivityDate = new Date().toISOString();
+      updateHPMP(gamification);
+    }
+    
     res.json({ success: true, response });
   } catch (error) {
     console.error('Chat error:', error);
@@ -927,6 +1003,37 @@ app.post('/api/medications/:userId/:medId/taken', (req, res) => {
 
   if (!existingEntry) {
     medication.takenToday.push({ time, date: today });
+    
+    // Award XP for taking medication
+    const user = users.find(u => u.id === req.params.userId);
+    if (user) {
+      const gamification = initializeGamification(user);
+      gamification.xp += 25; // Medication XP
+      gamification.stats.medicationsTaken += 1;
+      gamification.stats.lastActivityDate = new Date().toISOString();
+      
+      // Update medication adherence streak
+      const allMeds = medications.filter(m => m.userId === req.params.userId);
+      const allTakenToday = allMeds.every(m => {
+        if (!m.takenToday || m.takenToday.length === 0) return false;
+        return m.takenToday.some(entry => entry.date === today);
+      });
+      
+      if (allTakenToday) {
+        const lastActivity = gamification.stats.lastActivityDate;
+        const daysDiff = lastActivity 
+          ? Math.floor((new Date() - new Date(lastActivity)) / (1000 * 60 * 60 * 24))
+          : 999;
+        
+        if (daysDiff <= 1) {
+          gamification.streaks.medicationAdherence += 1;
+        } else {
+          gamification.streaks.medicationAdherence = 1;
+        }
+      }
+      
+      updateHPMP(gamification);
+    }
   }
 
   res.json({ success: true, medication });
@@ -944,6 +1051,219 @@ app.delete('/api/medications/:userId/:medId', (req, res) => {
 
   medications.splice(medicationIndex, 1);
   res.json({ success: true });
+});
+
+// Gamification endpoints
+app.get('/api/gamification/:userId', (req, res) => {
+  try {
+    const user = users.find(u => u.id === req.params.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const gamification = initializeGamification(user);
+    updateHPMP(gamification);
+    
+    res.json({ success: true, gamification });
+  } catch (error) {
+    console.error('Error fetching gamification:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/gamification/:userId/award-xp', (req, res) => {
+  try {
+    const { xp, action } = req.body;
+    const user = users.find(u => u.id === req.params.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const gamification = initializeGamification(user);
+    const oldXP = gamification.xp;
+    const oldLevel = gamification.level || calculateLevel(oldXP);
+    
+    gamification.xp += xp;
+    gamification.stats.lastActivityDate = new Date().toISOString();
+    
+    // Update stats based on action
+    if (action === 'scan') {
+      gamification.stats.scansCompleted += 1;
+    } else if (action === 'medication') {
+      gamification.stats.medicationsTaken += 1;
+    } else if (action === 'chatbot') {
+      gamification.stats.chatbotInteractions += 1;
+    }
+    
+    updateHPMP(gamification);
+    
+    // Calculate new level AFTER adding XP
+    const newLevel = calculateLevel(gamification.xp);
+    const leveledUp = newLevel > oldLevel;
+    
+    // Update level in gamification object
+    gamification.level = newLevel;
+    
+    if (leveledUp) {
+      gamification.xp += 200; // Level up bonus
+      gamification.gold += newLevel * 10;
+      // Recalculate level after bonus XP
+      gamification.level = calculateLevel(gamification.xp);
+    }
+    
+    res.json({ 
+      success: true, 
+      gamification,
+      leveledUp,
+      newLevel: leveledUp ? newLevel : null
+    });
+  } catch (error) {
+    console.error('Error awarding XP:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/gamification/:userId/check-in', (req, res) => {
+  try {
+    const user = users.find(u => u.id === req.params.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const gamification = initializeGamification(user);
+    const today = new Date().toISOString().split('T')[0];
+    const lastCheckIn = gamification.stats.lastCheckIn;
+    
+    // Check if already checked in today
+    if (lastCheckIn === today) {
+      return res.json({ success: true, gamification, alreadyCheckedIn: true });
+    }
+    
+    // Update streak
+    const lastCheckInDate = lastCheckIn ? new Date(lastCheckIn) : null;
+    const now = new Date();
+    const daysDiff = lastCheckInDate 
+      ? Math.floor((now - lastCheckInDate) / (1000 * 60 * 60 * 24))
+      : 999;
+    
+    if (daysDiff === 1) {
+      gamification.streaks.dailyCheckIn += 1;
+    } else if (daysDiff > 1) {
+      gamification.streaks.dailyCheckIn = 1;
+    } else {
+      gamification.streaks.dailyCheckIn = 1;
+    }
+    
+    gamification.stats.lastCheckIn = today;
+    gamification.stats.lastActivityDate = new Date().toISOString();
+    gamification.stats.daysActive += 1;
+    
+    // Award XP for check-in
+    const oldXP = gamification.xp;
+    const oldLevel = gamification.level || calculateLevel(oldXP);
+    
+    gamification.xp += 15;
+    
+    // Award bonus XP for streak milestones
+    const streak = gamification.streaks.dailyCheckIn;
+    if (streak === 7) gamification.xp += 50;
+    if (streak === 14) gamification.xp += 100;
+    if (streak === 30) gamification.xp += 250;
+    
+    // Calculate new level AFTER adding XP
+    const newLevel = calculateLevel(gamification.xp);
+    const leveledUp = newLevel > oldLevel;
+    
+    // Update level in gamification object
+    gamification.level = newLevel;
+    
+    if (leveledUp) {
+      gamification.xp += 200; // Level up bonus
+      gamification.gold += newLevel * 10;
+      // Recalculate level after bonus XP
+      gamification.level = calculateLevel(gamification.xp);
+    }
+    
+    updateHPMP(gamification);
+    
+    res.json({ 
+      success: true, 
+      gamification,
+      leveledUp: leveledUp,
+      newLevel: leveledUp ? gamification.level : null
+    });
+  } catch (error) {
+    console.error('Error checking in:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/gamification/:userId/achievements', (req, res) => {
+  try {
+    const user = users.find(u => u.id === req.params.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const gamification = initializeGamification(user);
+    res.json({ success: true, achievements: gamification.achievements });
+  } catch (error) {
+    console.error('Error fetching achievements:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/gamification/:userId/unlock-achievement', (req, res) => {
+  try {
+    const { achievementId } = req.body;
+    const user = users.find(u => u.id === req.params.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const gamification = initializeGamification(user);
+    
+    if (!gamification.achievements.includes(achievementId)) {
+      gamification.achievements.push(achievementId);
+      gamification.xp += 50; // Achievement unlock bonus
+    }
+    
+    res.json({ success: true, gamification });
+  } catch (error) {
+    console.error('Error unlocking achievement:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/gamification/:userId/update-stats', (req, res) => {
+  try {
+    const { stats, streaks } = req.body;
+    const user = users.find(u => u.id === req.params.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const gamification = initializeGamification(user);
+    
+    if (stats) {
+      gamification.stats = { ...gamification.stats, ...stats };
+    }
+    
+    if (streaks) {
+      gamification.streaks = { ...gamification.streaks, ...streaks };
+    }
+    
+    gamification.stats.lastActivityDate = new Date().toISOString();
+    updateHPMP(gamification);
+    
+    res.json({ success: true, gamification });
+  } catch (error) {
+    console.error('Error updating stats:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.listen(PORT, () => {

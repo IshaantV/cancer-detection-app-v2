@@ -1,0 +1,145 @@
+.gamification-bar {
+  margin-bottom: 20px;
+  padding: 20px 25px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(139, 92, 246, 0.2);
+  border: 2px solid rgba(139, 92, 246, 0.3);
+}
+
+.gamification-stats {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 120px;
+}
+
+.level-stat {
+  align-items: center;
+  min-width: 80px;
+}
+
+.level-stat .stat-value {
+  background: linear-gradient(135deg, var(--primary-purple), var(--primary-pink));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+}
+
+.stat-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stat-icon {
+  color: var(--text-dark);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-light);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.stat-value {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--text-dark);
+}
+
+.hp-stat .stat-icon {
+  color: var(--primary-red);
+}
+
+.mp-stat .stat-icon {
+  color: var(--primary-cyan);
+}
+
+.xp-stat .stat-icon {
+  color: var(--primary-yellow);
+}
+
+.gold-stat {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, var(--primary-yellow), #fbbf24);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+  border: 2px solid rgba(251, 191, 36, 0.3);
+}
+
+.gold-stat .stat-icon {
+  color: var(--text-dark);
+}
+
+.gold-stat .stat-value {
+  color: var(--text-dark);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.pixel-progress-bar {
+  height: 20px;
+  min-width: 100px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.pixel-progress-fill {
+  height: 100%;
+  transition: width 0.5s ease;
+  border-radius: 10px;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pixel-progress-red {
+  background: linear-gradient(90deg, var(--primary-red), #f87171);
+}
+
+.pixel-progress-cyan {
+  background: linear-gradient(90deg, var(--primary-cyan), #22d3ee);
+}
+
+.pixel-progress-yellow {
+  background: linear-gradient(90deg, var(--primary-yellow), #fbbf24);
+}
+
+.pixel-progress-green {
+  background: linear-gradient(90deg, var(--primary-green), #34d399);
+}
+
+@media (max-width: 768px) {
+  .gamification-stats {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .stat-item {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .gold-stat {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
+}
+

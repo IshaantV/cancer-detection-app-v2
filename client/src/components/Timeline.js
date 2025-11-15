@@ -53,6 +53,10 @@ const Timeline = ({ user }) => {
       }
     } catch (error) {
       console.error('❌ Error fetching images:', error);
+      if (error.message && (error.message.includes('Cannot connect to server') || error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+        console.warn('⚠️ Backend server is not running. Please start it with: cd server && node index.js');
+        console.warn('⚠️ Images will not load until server is started.');
+      }
       setImages([]);
     } finally {
       setLoading(false);
@@ -265,8 +269,12 @@ const Timeline = ({ user }) => {
                     src={image.cloudinaryUrl || `${API_BASE_URL}/${image.path}`}
                     alt={`Scan ${index + 1}`}
                     onError={(e) => {
-                      e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2U1ZTdlYiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZTwvdGV4dD48L3N2Zz4=';
+                      console.error('Image load error:', image.cloudinaryUrl || `${API_BASE_URL}/${image.path}`);
+                      // Use a placeholder image
+                      e.target.onerror = null; // Prevent infinite loop
+                      e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2U1ZTdlYiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZSBVbmF2YWlsYWJsZTwvdGV4dD48L3N2Zz4=';
                     }}
+                    loading="lazy"
                   />
                 </div>
                 <div className="card-content">
@@ -343,6 +351,11 @@ const Timeline = ({ user }) => {
               src={selectedImage.cloudinaryUrl || `${API_BASE_URL}/${selectedImage.path}`}
               alt="Full size"
               className="modal-image"
+              onError={(e) => {
+                console.error('Modal image load error:', selectedImage.cloudinaryUrl || `${API_BASE_URL}/${selectedImage.path}`);
+                e.target.onerror = null;
+                e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCIgZmlsbD0iI2U1ZTdlYiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZSBVbmF2YWlsYWJsZTwvdGV4dD48L3N2Zz4=';
+              }}
             />
             
             {selectedImage.analysis && (
@@ -400,7 +413,10 @@ const Timeline = ({ user }) => {
                   </div>
                 )}
 
-                <MedicationRecommendations analysis={selectedImage.analysis} />
+                <MedicationRecommendations 
+                  analysis={selectedImage.analysis} 
+                  userId={user.id}
+                />
 
                 {selectedImage.notes && (
                   <div className="modal-notes">

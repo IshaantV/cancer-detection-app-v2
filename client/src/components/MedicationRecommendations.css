@@ -117,6 +117,27 @@
   line-height: 1.5;
 }
 
+.add-to-schedule-button {
+  margin-top: 12px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+  padding: 10px 16px;
+}
+
+.add-to-schedule-button.added {
+  background: #95E1D3;
+  cursor: default;
+}
+
+.add-to-schedule-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 @media (max-width: 768px) {
   .medication-recommendations {
     padding: 15px;
