@@ -5,7 +5,6 @@ A comprehensive mobile-responsive web application for skin cancer detection usin
 ## 🎯 Features
 
 - **AI-Powered Cancer Detection**: Analyzes skin images using pattern, shape, and size recognition
-- **Mobile-First Design**: Fully responsive interface optimized for mobile devices
 - **Blockchain Encryption**: Secure data storage with blockchain-based encryption
 - **AI Chatbot**: Personalized health advice based on user profile and quiz responses
 - **Progress Timeline**: Track skin condition changes over time with visual timeline
@@ -13,6 +12,8 @@ A comprehensive mobile-responsive web application for skin cancer detection usin
 - **User Profiles**: Comprehensive health assessment quiz for personalized recommendations
 
 ## 🚀 Quick Start
+Double click start.bat file to run the app locally
+However it currently works for mobile right now
 
 ### Prerequisites
 - Node.js (v16 or higher)
