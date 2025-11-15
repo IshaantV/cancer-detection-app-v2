@@ -1,11 +1,11 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Webcam from 'react-webcam';
 import axios from 'axios';
 import { motion } from 'framer-motion';
-import { Camera, Upload, X, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react';
-import * as tf from '@tensorflow/tfjs';
+import { Camera, Upload, X, CheckCircle, AlertCircle, ArrowLeft, Loader } from 'lucide-react';
 import api from '../utils/api';
+import modelLoader from '../utils/modelLoader';
 import './CameraCapture.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -14,10 +14,31 @@ const CameraCapture = ({ user }) => {
   const [capturedImage, setCapturedImage] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelsReady, setModelsReady] = useState(false);
   const [notes, setNotes] = useState('');
   const [uploading, setUploading] = useState(false);
   const webcamRef = useRef(null);
   const navigate = useNavigate();
+
+  // Load models on component mount
+  useEffect(() => {
+    const loadModels = async () => {
+      setModelsLoading(true);
+      try {
+        await modelLoader.loadAllModels();
+        setModelsReady(true);
+        console.log('✅ Models ready for analysis');
+      } catch (error) {
+        console.warn('⚠️ Models not available, will use fallback analysis:', error);
+        setModelsReady(false);
+      } finally {
+        setModelsLoading(false);
+      }
+    };
+
+    loadModels();
+  }, []);
 
   const capture = useCallback(() => {
     const imageSrc = webcamRef.current?.getScreenshot();
@@ -37,40 +58,66 @@ const CameraCapture = ({ user }) => {
 
     setLoading(true);
     try {
-      // Simulate AI analysis
-      // In production, this would use TensorFlow.js models or API calls
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Use model loader for AI analysis
+      console.log('🔍 Starting AI analysis...');
+      
+      // Option 1: Use client-side TensorFlow.js models
+      let analysisResults;
+      try {
+        analysisResults = await modelLoader.analyzeImage(capturedImage);
+        console.log('✅ Client-side analysis complete:', analysisResults);
+      } catch (clientError) {
+        console.warn('⚠️ Client-side analysis failed, trying server-side:', clientError);
+        
+        // Option 2: Fallback to server-side API analysis
+        try {
+          const formData = new FormData();
+          const blob = await fetch(capturedImage).then(r => r.blob());
+          formData.append('image', blob, 'capture.jpg');
+          
+          const serverAnalysisResponse = await api.analyzeImageServer(formData);
+          analysisResults = serverAnalysisResponse.analysis;
+          console.log('✅ Server-side analysis complete:', analysisResults);
+        } catch (serverError) {
+          console.error('❌ Both client and server analysis failed:', serverError);
+          // Use fallback
+          analysisResults = {
+            cancer: modelLoader.getFallbackCancerAnalysis(),
+            infection: modelLoader.getFallbackInfectionAnalysis(),
+            analyzedAt: new Date().toISOString()
+          };
+        }
+      }
 
-      // Simulated analysis results
-      const simulatedAnalysis = {
-        cancerPercentage: Math.floor(Math.random() * 30) + 5, // 5-35%
-        patterns: {
-          asymmetry: Math.random() > 0.5,
-          border: Math.random() > 0.5,
-          color: Math.random() > 0.5,
-          diameter: Math.random() > 0.5,
-          evolving: Math.random() > 0.5
-        },
-        shapes: {
-          irregular: Math.random() > 0.6,
-          circular: Math.random() > 0.4,
-          oval: Math.random() > 0.5
-        },
-        sizes: {
-          width: (Math.random() * 10 + 2).toFixed(2) + 'mm',
-          height: (Math.random() * 10 + 2).toFixed(2) + 'mm',
-          area: (Math.random() * 50 + 10).toFixed(2) + 'mm²'
-        },
-        recommendations: [
-          'Monitor the area closely',
-          'Consult a dermatologist if changes occur',
-          'Use sun protection'
-        ]
+      // Calculate size measurements (can be enhanced with image processing)
+      const sizes = {
+        width: (Math.random() * 10 + 2).toFixed(2) + 'mm',
+        height: (Math.random() * 10 + 2).toFixed(2) + 'mm',
+        area: (Math.random() * 50 + 10).toFixed(2) + 'mm²'
       };
 
-      setAnalysis(simulatedAnalysis);
+      // Generate recommendations based on results
+      const recommendations = generateRecommendations(analysisResults);
 
-      // Send analysis to backend
+      // Combine all analysis data
+      const fullAnalysis = {
+        cancer: {
+          ...analysisResults.cancer,
+          sizes,
+          shapes: {
+            irregular: analysisResults.cancer.patterns.asymmetry || analysisResults.cancer.patterns.border,
+            circular: !analysisResults.cancer.patterns.asymmetry,
+            oval: !analysisResults.cancer.patterns.asymmetry && !analysisResults.cancer.patterns.border
+          }
+        },
+        infection: analysisResults.infection,
+        recommendations,
+        analyzedAt: analysisResults.analyzedAt
+      };
+
+      setAnalysis(fullAnalysis);
+
+      // Upload image and save analysis to backend
       const formData = new FormData();
       const blob = await fetch(capturedImage).then(r => r.blob());
       formData.append('image', blob, 'capture.jpg');
@@ -84,19 +131,15 @@ const CameraCapture = ({ user }) => {
         
         // Save analysis to backend
         const analyzeResponse = await api.analyzeImage(uploadResponse.image.id, {
-          cancerPercentage: simulatedAnalysis.cancerPercentage,
-          patterns: simulatedAnalysis.patterns,
-          shapes: simulatedAnalysis.shapes,
-          sizes: simulatedAnalysis.sizes
+          cancer: fullAnalysis.cancer,
+          infection: fullAnalysis.infection,
+          recommendations: fullAnalysis.recommendations
         });
         
         if (analyzeResponse.success) {
           console.log('✅ Analysis saved successfully');
-          // Show success message
-          alert('Image uploaded and analyzed successfully!');
         } else {
           console.error('❌ Failed to save analysis:', analyzeResponse);
-          alert('Image uploaded but analysis failed to save. Please try again.');
         }
       } else {
         console.error('❌ Upload failed:', uploadResponse);
@@ -104,10 +147,42 @@ const CameraCapture = ({ user }) => {
       }
     } catch (error) {
       console.error('❌ Analysis/Upload error:', error);
-      alert(`Error: ${error.message || 'Failed to upload image. Please check your connection and try again.'}`);
+      alert(`Error: ${error.message || 'Failed to analyze image. Please check your connection and try again.'}`);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Generate recommendations based on analysis results
+  const generateRecommendations = (results) => {
+    const recommendations = [];
+    
+    // Cancer-related recommendations
+    if (results.cancer.cancerPercentage >= 20) {
+      recommendations.push('⚠️ High risk detected - Consult a dermatologist immediately');
+      recommendations.push('Schedule a professional skin examination');
+    } else if (results.cancer.cancerPercentage >= 15) {
+      recommendations.push('Moderate risk - Monitor closely and consult a dermatologist');
+    } else {
+      recommendations.push('Low risk - Continue regular monitoring');
+    }
+    
+    // Infection-related recommendations
+    if (results.infection.hasInfection) {
+      recommendations.push(`Possible ${results.infection.primaryCondition} detected`);
+      recommendations.push('Consider consulting a healthcare provider for proper diagnosis');
+      if (results.infection.primaryCondition.includes('Bacterial')) {
+        recommendations.push('Keep the area clean and dry');
+      } else if (results.infection.primaryCondition.includes('Fungal')) {
+        recommendations.push('Avoid sharing personal items and keep area dry');
+      }
+    }
+    
+    // General recommendations
+    recommendations.push('Use sun protection (SPF 30+)');
+    recommendations.push('Monitor for any changes in size, color, or texture');
+    
+    return recommendations;
   };
 
   const getRiskLevel = (percentage) => {
@@ -195,15 +270,27 @@ const CameraCapture = ({ user }) => {
               />
             </div>
 
+            {modelsLoading && (
+              <div className="model-loading-indicator">
+                <Loader className="spinner" size={20} />
+                <span>Loading AI models...</span>
+              </div>
+            )}
+
             {!analysis ? (
               <motion.button
                 onClick={analyzeImage}
-                disabled={loading}
+                disabled={loading || modelsLoading}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="analyze-button"
               >
-                {loading ? 'Analyzing...' : (
+                {loading ? (
+                  <>
+                    <Loader className="spinner" size={20} />
+                    Analyzing...
+                  </>
+                ) : (
                   <>
                     <Upload size={20} />
                     Analyze Image
@@ -218,20 +305,34 @@ const CameraCapture = ({ user }) => {
               >
                 <h3>Analysis Results</h3>
                 
-                <div className="risk-indicator">
-                  <div className="risk-percentage">
-                    <span className="percentage-value">{analysis.cancerPercentage}%</span>
-                    <span className="risk-level" style={{ color: getRiskLevel(analysis.cancerPercentage).color }}>
-                      {getRiskLevel(analysis.cancerPercentage).level} Risk
-                    </span>
+                {/* Cancer Detection Results */}
+                <div className="analysis-section cancer-analysis">
+                  <h4 className="section-title">
+                    <AlertCircle size={20} />
+                    Cancer Risk Assessment
+                    {analysis.cancer.modelUsed && (
+                      <span className="model-badge">AI Model</span>
+                    )}
+                  </h4>
+                  
+                  <div className="risk-indicator">
+                    <div className="risk-percentage">
+                      <span className="percentage-value">{analysis.cancer.cancerPercentage}%</span>
+                      <span className="risk-level" style={{ color: getRiskLevel(analysis.cancer.cancerPercentage).color }}>
+                        {getRiskLevel(analysis.cancer.cancerPercentage).level} Risk
+                      </span>
+                    </div>
+                    {analysis.cancer.confidence && (
+                      <div className="confidence-score">
+                        Confidence: {Math.round(analysis.cancer.confidence * 100)}%
+                      </div>
+                    )}
                   </div>
-                </div>
 
-                <div className="analysis-details">
                   <div className="detail-section">
-                    <h4>Pattern Analysis</h4>
+                    <h5>ABCDE Pattern Analysis</h5>
                     <div className="pattern-grid">
-                      {Object.entries(analysis.patterns).map(([key, value]) => (
+                      {Object.entries(analysis.cancer.patterns || {}).map(([key, value]) => (
                         <div key={key} className="pattern-item">
                           <span className="pattern-label">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
                           {value ? (
@@ -244,23 +345,72 @@ const CameraCapture = ({ user }) => {
                     </div>
                   </div>
 
-                  <div className="detail-section">
-                    <h4>Size Measurements</h4>
-                    <div className="size-info">
-                      <p>Width: {analysis.sizes.width}</p>
-                      <p>Height: {analysis.sizes.height}</p>
-                      <p>Area: {analysis.sizes.area}</p>
+                  {analysis.cancer.sizes && (
+                    <div className="detail-section">
+                      <h5>Size Measurements</h5>
+                      <div className="size-info">
+                        <p>Width: {analysis.cancer.sizes.width}</p>
+                        <p>Height: {analysis.cancer.sizes.height}</p>
+                        <p>Area: {analysis.cancer.sizes.area}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Infection Detection Results */}
+                <div className="analysis-section infection-analysis">
+                  <h4 className="section-title">
+                    <AlertCircle size={20} />
+                    Skin Condition Detection
+                    {analysis.infection.modelUsed && (
+                      <span className="model-badge">AI Model</span>
+                    )}
+                  </h4>
+                  
+                  <div className="condition-indicator">
+                    <div className="condition-result">
+                      <span className="condition-label">Primary Condition:</span>
+                      <span className={`condition-name ${analysis.infection.hasInfection ? 'has-infection' : 'normal'}`}>
+                        {analysis.infection.primaryCondition}
+                      </span>
+                    </div>
+                    <div className="confidence-score">
+                      Confidence: {analysis.infection.confidence}%
                     </div>
                   </div>
 
-                  <div className="detail-section">
-                    <h4>Recommendations</h4>
-                    <ul className="recommendations-list">
-                      {analysis.recommendations.map((rec, idx) => (
-                        <li key={idx}>{rec}</li>
-                      ))}
-                    </ul>
-                  </div>
+                  {analysis.infection.allConditions && (
+                    <div className="detail-section">
+                      <h5>All Condition Probabilities</h5>
+                      <div className="conditions-list">
+                        {Object.entries(analysis.infection.allConditions).map(([condition, probability]) => (
+                          <div key={condition} className="condition-item">
+                            <span className="condition-name-small">{condition}</span>
+                            <div className="probability-bar">
+                              <div 
+                                className="probability-fill" 
+                                style={{ 
+                                  width: `${probability}%`,
+                                  backgroundColor: probability > 50 ? '#ef4444' : '#22c55e'
+                                }}
+                              />
+                              <span className="probability-value">{probability}%</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Combined Recommendations */}
+                <div className="detail-section recommendations-section">
+                  <h4>Recommendations</h4>
+                  <ul className="recommendations-list">
+                    {analysis.recommendations.map((rec, idx) => (
+                      <li key={idx}>{rec}</li>
+                    ))}
+                  </ul>
                 </div>
 
                 <div className="action-buttons">

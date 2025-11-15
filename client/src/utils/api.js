@@ -160,6 +160,25 @@ export const api = {
     }
   },
 
+  // Server-side AI analysis endpoint
+  analyzeImageServer: async (formData) => {
+    try {
+      const url = `${API_BASE_URL}/api/analyze-server`;
+      console.log('📤 Requesting server-side analysis from:', url);
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData
+      });
+      console.log('📥 Server analysis response status:', response.status);
+      const result = await handleResponse(response);
+      console.log('✅ Server analysis complete:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Server analysis API error:', error);
+      throw error;
+    }
+  },
+
   // Chat endpoints
   sendMessage: async (message, userId) => {
     try {
